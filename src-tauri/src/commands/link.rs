@@ -45,3 +45,8 @@ pub fn update_link(
 pub fn delete_link(db: State<Database>, id: String) -> Result<(), String> {
     db.delete_link(&id).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn update_link_config(db: State<Database>, id: String, config: Option<String>) -> Result<(), String> {
+    db.update_link_config(&id, config.as_deref()).map_err(|e| e.to_string())
+}

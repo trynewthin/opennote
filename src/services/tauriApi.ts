@@ -29,5 +29,5 @@ export async function deleteProject(id: string): Promise<void> {
 export async function getProjectNoteCount(
     projectId: string
 ): Promise<number> {
-    return invoke<number>("get_project_note_count", { projectId });
+    return invoke<number>("get_project_node_count", { projectId });
 }

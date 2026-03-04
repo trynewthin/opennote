@@ -16,9 +16,10 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, StickyNote, Clock } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, StickyNote, Clock, Download } from "lucide-react";
 import { ProjectFormDialog } from "./ProjectFormDialog";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
+import { ImportExportDialog } from "./ImportExportDialog";
 
 interface ProjectCardProps {
     project: Project;
@@ -29,6 +30,7 @@ interface ProjectCardProps {
 export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
     const [editOpen, setEditOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [exportOpen, setExportOpen] = useState(false);
 
     const timeAgo = formatRelativeTime(project.updated_at);
 
@@ -63,6 +65,15 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
                                 >
                                     <Pencil />
                                     编辑
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExportOpen(true);
+                                    }}
+                                >
+                                    <Download />
+                                    导出
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -108,6 +119,13 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
                 project={project}
                 noteCount={noteCount}
             />
+            {exportOpen && (
+                <ImportExportDialog
+                    mode="export"
+                    project={project}
+                    onClose={() => setExportOpen(false)}
+                />
+            )}
         </>
     );
 }

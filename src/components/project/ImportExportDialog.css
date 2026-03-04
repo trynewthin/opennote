@@ -1,0 +1,222 @@
+/* ─── Import / Export Dialog ─── */
+
+.ie-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    animation: ie-overlay-in 0.15s ease;
+}
+
+@keyframes ie-overlay-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.ie-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(420px, 90vw);
+    border-radius: 16px;
+    overflow: hidden;
+    animation: ie-dialog-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    background: var(--card);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+:is(.dark) .ie-dialog {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes ie-dialog-in {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Header */
+.ie-dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:is(.dark) .ie-dialog__header {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.ie-dialog__header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ie-dialog__header-icon {
+    width: 18px;
+    height: 18px;
+    color: #52525b;
+}
+
+:is(.dark) .ie-dialog__header-icon {
+    color: #a1a1aa;
+}
+
+.ie-dialog__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #18181b;
+    margin: 0;
+}
+
+:is(.dark) .ie-dialog__title {
+    color: #e4e4e7;
+}
+
+.ie-dialog__close {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #a1a1aa;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s ease;
+}
+
+.ie-dialog__close:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+:is(.dark) .ie-dialog__close:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Body */
+.ie-dialog__body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ie-dialog__info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.ie-dialog__info-label {
+    color: #a1a1aa;
+}
+
+.ie-dialog__info-value {
+    font-weight: 600;
+    color: #18181b;
+}
+
+:is(.dark) .ie-dialog__info-value {
+    color: #e4e4e7;
+}
+
+.ie-dialog__desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #71717a;
+}
+
+/* Error */
+.ie-dialog__error {
+    font-size: 13px;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+/* Footer */
+.ie-dialog__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:is(.dark) .ie-dialog__footer {
+    border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+.ie-dialog__btn {
+    padding: 6px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background 0.12s ease, opacity 0.12s ease;
+}
+
+.ie-dialog__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ie-dialog__btn--cancel {
+    background: rgba(0, 0, 0, 0.05);
+    color: #71717a;
+}
+
+.ie-dialog__btn--cancel:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+:is(.dark) .ie-dialog__btn--cancel {
+    background: rgba(255, 255, 255, 0.08);
+    color: #a1a1aa;
+}
+
+:is(.dark) .ie-dialog__btn--cancel:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.ie-dialog__btn--primary {
+    background: #3f3f46;
+    color: #fff;
+}
+
+.ie-dialog__btn--primary:hover:not(:disabled) {
+    background: #27272a;
+}
+
+:is(.dark) .ie-dialog__btn--primary {
+    background: #e4e4e7;
+    color: #18181b;
+}
+
+:is(.dark) .ie-dialog__btn--primary:hover:not(:disabled) {
+    background: #f4f4f5;
+}

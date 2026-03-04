@@ -36,6 +36,7 @@ impl Database {
             link_type: link_type.to_string(),
             weight,
             sort_order,
+            config: None,
             created_at: now,
         })
     }
@@ -57,21 +58,16 @@ impl Database {
         )?;
 
         conn.query_row(
-            "SELECT id, project_id, source_id, target_id, label, direction, link_type, weight, sort_order, created_at FROM links WHERE id = ?1",
+            "SELECT id, project_id, source_id, target_id, label, direction, link_type, weight, sort_order, config, created_at FROM links WHERE id = ?1",
             params![id],
-            |row| Ok(Link {
-                id: row.get(0)?,
-                project_id: row.get(1)?,
-                source_id: row.get(2)?,
-                target_id: row.get(3)?,
-                label: row.get(4)?,
-                direction: row.get(5)?,
-                link_type: row.get(6)?,
-                weight: row.get(7)?,
-                sort_order: row.get(8)?,
-                created_at: row.get(9)?,
-            }),
+            Self::map_link,
         )
+    }
+
+    pub fn update_link_config(&self, id: &str, config: Option<&str>) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("UPDATE links SET config = ?1 WHERE id = ?2", params![config, id])?;
+        Ok(())
     }
 
     pub fn delete_link(&self, id: &str) -> Result<()> {
@@ -83,11 +79,18 @@ impl Database {
     pub fn get_links_by_project(&self, project_id: &str) -> Result<Vec<Link>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, project_id, source_id, target_id, label, direction, link_type, weight, sort_order, created_at
+            "SELECT id, project_id, source_id, target_id, label, direction, link_type, weight, sort_order, config, created_at
              FROM links WHERE project_id = ?1 ORDER BY sort_order ASC",
         )?;
 
-        let rows = stmt.query_map(params![project_id], |row| Ok(Link {
+        let rows = stmt.query_map(params![project_id], Self::map_link)?
+            .collect::<Result<Vec<_>>>();
+
+        rows
+    }
+
+    fn map_link(row: &rusqlite::Row<'_>) -> rusqlite::Result<Link> {
+        Ok(Link {
             id: row.get(0)?,
             project_id: row.get(1)?,
             source_id: row.get(2)?,
@@ -97,10 +100,8 @@ impl Database {
             link_type: row.get(6)?,
             weight: row.get(7)?,
             sort_order: row.get(8)?,
-            created_at: row.get(9)?,
-        }))?
-        .collect::<Result<Vec<_>>>();
-
-        rows
+            config: row.get(9)?,
+            created_at: row.get(10)?,
+        })
     }
 }

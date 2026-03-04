@@ -24,6 +24,8 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(database)
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -40,33 +42,41 @@ pub fn run() {
             commands::project::create_project,
             commands::project::update_project,
             commands::project::delete_project,
-            commands::project::get_project_note_count,
-            // 笔记 + 图谱
-            commands::note::get_graph_data,
-            commands::note::create_note,
-            commands::note::update_note,
-            commands::note::update_note_position,
-            commands::note::delete_note,
-            commands::note::search_notes,
-            commands::note::get_ancestors,
-            commands::note::move_note,
-            commands::note::batch_delete_notes,
-            commands::note::batch_move_notes,
-            commands::note::get_children_counts,
-            // 属性
-            commands::property::set_property,
-            commands::property::get_properties,
-            commands::property::delete_property,
+            commands::project::get_project_node_count,
+            commands::project::update_project_config,
+            // 节点 + 图谱
+            commands::node::get_graph_data,
+            commands::node::create_node,
+            commands::node::update_node,
+            commands::node::update_node_position,
+            commands::node::delete_node,
+            commands::node::search_nodes,
+            commands::node::batch_delete_nodes,
+            commands::node::update_node_config,
+            // 内容
+            commands::content::create_content,
+            commands::content::update_content,
+            commands::content::delete_content,
+            commands::content::get_contents_by_project,
+            commands::content::add_content_to_node,
+            commands::content::remove_content_from_node,
+            commands::content::get_node_content_rels,
+            commands::content::update_content_rel_position,
+            commands::content::update_content_config,
             // 关联
             commands::link::create_link,
             commands::link::update_link,
             commands::link::delete_link,
+            commands::link::update_link_config,
             // 分组
             commands::group::create_group,
             commands::group::update_group,
             commands::group::delete_group,
-            commands::group::add_note_to_group,
-            commands::group::remove_note_from_group,
+            commands::group::add_node_to_group,
+            commands::group::remove_node_from_group,
+            // 导入/导出
+            commands::import_export::export_project_on,
+            commands::import_export::import_project_on,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

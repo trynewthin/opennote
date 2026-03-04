@@ -28,19 +28,19 @@ pub fn delete_group(db: State<Database>, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn add_note_to_group(
+pub fn add_node_to_group(
     db: State<Database>,
     group_id: String,
-    note_id: String,
+    node_id: String,
 ) -> Result<(), String> {
-    db.add_note_to_group(&group_id, &note_id).map_err(|e| e.to_string())
+    db.add_node_to_group(&group_id, &node_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn remove_note_from_group(
+pub fn remove_node_from_group(
     db: State<Database>,
     group_id: String,
-    note_id: String,
+    node_id: String,
 ) -> Result<(), String> {
-    db.remove_note_from_group(&group_id, &note_id).map_err(|e| e.to_string())
+    db.remove_node_from_group(&group_id, &node_id).map_err(|e| e.to_string())
 }

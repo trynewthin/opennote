@@ -5,19 +5,19 @@ export interface Project {
     id: string;
     name: string;
     description: string;
+    config: string | null;
     created_at: number;
     updated_at: number;
 }
 
 /** 知识节点 */
-export interface Note {
+export interface Node {
     id: string;
     project_id: string;
-    parent_id: string | null;
     title: string;
     x: number;
     y: number;
-    depth: number;
+    config: string | null;
     created_at: number;
     updated_at: number;
 }
@@ -33,19 +33,28 @@ export interface Link {
     link_type: string;
     weight: number;
     sort_order: number;
+    config: string | null;
     created_at: number;
 }
 
-/** 节点属性 */
-export interface Property {
+/** 节点内容（文本/图片/音频/视频/文件） */
+export interface Content {
     id: string;
-    node_id: string;
-    prop_type: string;
-    prop_key: string;
+    project_id: string;
+    content_type: string;
     value_text: string | null;
     value_number: number | null;
-    sort_order: number;
+    config: string | null;
     created_at: number;
+}
+
+/** 节点与内容关联 */
+export interface NodeContentRel {
+    node_id: string;
+    content_id: string;
+    sort_order: number;
+    rel_x: number;
+    rel_y: number;
 }
 
 /** 节点分组 */
@@ -60,14 +69,15 @@ export interface Group {
 /** 分组成员 */
 export interface GroupMember {
     group_id: string;
-    note_id: string;
+    node_id: string;
 }
 
 /** 完整图谱数据 */
 export interface GraphData {
-    notes: Note[];
+    nodes: Node[];
     links: Link[];
-    properties: Property[];
+    contents: Content[];
+    node_content_rels: NodeContentRel[];
     groups: Group[];
     group_members: GroupMember[];
 }

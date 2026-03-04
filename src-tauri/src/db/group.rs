@@ -71,20 +71,20 @@ impl Database {
 
     // ─── 分组成员 ───
 
-    pub fn add_note_to_group(&self, group_id: &str, note_id: &str) -> Result<()> {
+    pub fn add_node_to_group(&self, group_id: &str, node_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT OR IGNORE INTO group_members (group_id, note_id) VALUES (?1, ?2)",
-            params![group_id, note_id],
+            "INSERT OR IGNORE INTO group_members (group_id, node_id) VALUES (?1, ?2)",
+            params![group_id, node_id],
         )?;
         Ok(())
     }
 
-    pub fn remove_note_from_group(&self, group_id: &str, note_id: &str) -> Result<()> {
+    pub fn remove_node_from_group(&self, group_id: &str, node_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "DELETE FROM group_members WHERE group_id = ?1 AND note_id = ?2",
-            params![group_id, note_id],
+            "DELETE FROM group_members WHERE group_id = ?1 AND node_id = ?2",
+            params![group_id, node_id],
         )?;
         Ok(())
     }
@@ -92,14 +92,14 @@ impl Database {
     pub fn get_group_members_by_project(&self, project_id: &str) -> Result<Vec<GroupMember>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT gm.group_id, gm.note_id FROM group_members gm
+            "SELECT gm.group_id, gm.node_id FROM group_members gm
              JOIN groups g ON g.id = gm.group_id
              WHERE g.project_id = ?1",
         )?;
 
         let rows = stmt.query_map(params![project_id], |row| Ok(GroupMember {
             group_id: row.get(0)?,
-            note_id: row.get(1)?,
+            node_id: row.get(1)?,
         }))?
         .collect::<Result<Vec<_>>>();
 

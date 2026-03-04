@@ -6,20 +6,20 @@ pub struct Project {
     pub id: String,
     pub name: String,
     pub description: String,
+    pub config: Option<String>,      // JSON 主题/配置
     pub created_at: i64,
     pub updated_at: i64,
 }
 
 /// 知识节点（纯粹的图谱实体）
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Note {
+pub struct Node {
     pub id: String,
     pub project_id: String,
-    pub parent_id: Option<String>,   // null = 顶级节点
     pub title: String,
     pub x: f64,
     pub y: f64,
-    pub depth: i64,                  // 层级深度 (0 = 顶级)
+    pub config: Option<String>,      // JSON 主题/配置
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -36,20 +36,30 @@ pub struct Link {
     pub link_type: String,
     pub weight: f64,
     pub sort_order: i64,
+    pub config: Option<String>,      // JSON 主题/配置
     pub created_at: i64,
 }
 
-/// 节点属性（可扩展的键值对）
+/// 节点内容（文本、图片、音频、视频、文件等）
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Property {
+pub struct Content {
     pub id: String,
-    pub node_id: String,
-    pub prop_type: String,            // "text" | "file" | "number" | "date" | "tag"
-    pub prop_key: String,             // "content" | "summary" | "attachment" | ...
+    pub project_id: String,
+    pub content_type: String,       // "text" | "image" | "audio" | "video" | "file"
     pub value_text: Option<String>,
     pub value_number: Option<f64>,
-    pub sort_order: i64,
+    pub config: Option<String>,      // JSON 主题/配置
     pub created_at: i64,
+}
+
+/// 节点与内容的关联关系
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeContentRel {
+    pub node_id: String,
+    pub content_id: String,
+    pub sort_order: i64,
+    pub rel_x: f64,
+    pub rel_y: f64,
 }
 
 /// 节点分组
@@ -66,15 +76,33 @@ pub struct Group {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupMember {
     pub group_id: String,
-    pub note_id: String,
+    pub node_id: String,
 }
 
-/// 完整的图谱数据（按项目 + 层级加载）
+/// 完整的图谱数据（按项目加载）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphData {
-    pub notes: Vec<Note>,
+    pub nodes: Vec<Node>,
     pub links: Vec<Link>,
-    pub properties: Vec<Property>,
+    pub contents: Vec<Content>,
+    pub node_content_rels: Vec<NodeContentRel>,
     pub groups: Vec<Group>,
     pub group_members: Vec<GroupMember>,
+}
+
+/// 导出时的项目元数据（不含 id / 时间戳）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectExportMeta {
+    pub name: String,
+    pub description: String,
+    pub config: Option<String>,
+}
+
+/// 完整项目导出结构（序列化到 .on 内的 manifest.json）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectExport {
+    pub version: String,
+    pub exported_at: String,
+    pub project: ProjectExportMeta,
+    pub graph: GraphData,
 }

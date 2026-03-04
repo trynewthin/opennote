@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useProjectStore } from "@/stores/projectStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { ProjectCard, ProjectFormDialog } from "@/components/project";
@@ -9,22 +10,26 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Plus, FolderOpen, Settings, Sun, Moon } from "lucide-react";
+import { Plus, FolderOpen, Menu, Settings, Sun, Moon, Upload } from "lucide-react";
+import { SettingsDialog } from "@/components/settings/SettingsDialog";
+import { ImportExportDialog } from "@/components/project/ImportExportDialog";
 import type { Project } from "@/types";
 
 export function ProjectsPage() {
     const { projects, noteCounts, loading, error, fetchProjects } =
         useProjectStore();
     const [createOpen, setCreateOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [importOpen, setImportOpen] = useState(false);
     const { theme, toggleTheme } = useThemeStore();
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchProjects();
     }, [fetchProjects]);
 
     const handleOpenProject = (project: Project) => {
-        // TODO: 导航到图谱页面
-        console.log("打开项目:", project.id, project.name);
+        navigate(`/project/${project.id}`);
     };
 
     return (
@@ -44,6 +49,10 @@ export function ProjectsPage() {
                     <div className="flex items-center justify-between mb-6">
                         <h1 className="text-lg font-semibold">项目管理</h1>
                         <div className="flex items-center gap-2">
+                            <Button variant="outline" onClick={() => setImportOpen(true)}>
+                                <Upload className="size-4" data-icon="inline-start" />
+                                导入
+                            </Button>
                             <Button onClick={() => setCreateOpen(true)}>
                                 <Plus className="size-4" data-icon="inline-start" />
                                 新建项目
@@ -54,7 +63,7 @@ export function ProjectsPage() {
                                         <Button variant="outline" size="icon" />
                                     }
                                 >
-                                    <Settings className="size-4" />
+                                    <Menu className="size-4" />
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" sideOffset={4}>
                                     <DropdownMenuItem onClick={toggleTheme}>
@@ -64,6 +73,10 @@ export function ProjectsPage() {
                                             <Moon className="size-4" />
                                         )}
                                         {theme === "dark" ? "浅色模式" : "深色模式"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                                        <Settings className="size-4" />
+                                        设置
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -129,6 +142,18 @@ export function ProjectsPage() {
 
             {/* 新建弹窗 */}
             <ProjectFormDialog open={createOpen} onOpenChange={setCreateOpen} />
+
+            {/* 设置对话框 */}
+            {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+
+            {/* 导入对话框 */}
+            {importOpen && (
+                <ImportExportDialog
+                    mode="import"
+                    onImported={() => fetchProjects()}
+                    onClose={() => setImportOpen(false)}
+                />
+            )}
         </div>
     );
 }
