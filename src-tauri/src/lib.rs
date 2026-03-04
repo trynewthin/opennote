@@ -1,6 +1,6 @@
-mod models;
-mod db;
 mod commands;
+mod db;
+mod models;
 
 use db::Database;
 
@@ -19,10 +19,10 @@ pub fn run() {
         std::fs::create_dir_all(parent).expect("Failed to create data directory");
     }
 
-    let database = Database::new(db_path.to_str().unwrap())
-        .expect("Failed to initialize database");
+    let database = Database::new(db_path.to_str().unwrap()).expect("Failed to initialize database");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .manage(database)
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

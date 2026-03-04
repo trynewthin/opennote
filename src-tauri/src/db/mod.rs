@@ -1,10 +1,10 @@
 mod connection;
-mod project;
-mod node;
-mod link;
-mod group;
 mod content;
+mod group;
 mod import_export;
+mod link;
+mod node;
+mod project;
 
 pub use connection::Database;
 
@@ -24,6 +24,13 @@ impl Database {
         let groups = self.get_groups_by_project(project_id)?;
         let group_members = self.get_group_members_by_project(project_id)?;
 
-        Ok(GraphData { nodes, links, contents, node_content_rels, groups, group_members })
+        Ok(GraphData {
+            nodes,
+            links,
+            contents,
+            node_content_rels,
+            groups,
+            group_members,
+        })
     }
 }

@@ -1,7 +1,7 @@
+use chrono::Utc;
 use rusqlite::{params, Result};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::db::Database;
 use crate::models::*;
@@ -15,11 +15,13 @@ impl Database {
         let project_meta = conn.query_row(
             "SELECT name, description, config FROM projects WHERE id = ?1",
             params![project_id],
-            |row| Ok(ProjectExportMeta {
-                name: row.get(0)?,
-                description: row.get(1)?,
-                config: row.get(2)?,
-            }),
+            |row| {
+                Ok(ProjectExportMeta {
+                    name: row.get(0)?,
+                    description: row.get(1)?,
+                    config: row.get(2)?,
+                })
+            },
         )?;
 
         // 释放锁后使用已有方法获取图谱数据
@@ -75,7 +77,10 @@ impl Database {
 
         // 5. 创建节点-内容关联
         for rel in &data.graph.node_content_rels {
-            if let (Some(new_node), Some(new_content)) = (node_id_map.get(&rel.node_id), content_id_map.get(&rel.content_id)) {
+            if let (Some(new_node), Some(new_content)) = (
+                node_id_map.get(&rel.node_id),
+                content_id_map.get(&rel.content_id),
+            ) {
                 tx.execute(
                     "INSERT INTO node_content_rels (node_id, content_id, sort_order, rel_x, rel_y) VALUES (?1, ?2, ?3, ?4, ?5)",
                     params![new_node, new_content, rel.sort_order, rel.rel_x, rel.rel_y],
@@ -85,7 +90,10 @@ impl Database {
 
         // 6. 创建连线（保留全部字段含 config）
         for link in &data.graph.links {
-            if let (Some(new_src), Some(new_tgt)) = (node_id_map.get(&link.source_id), node_id_map.get(&link.target_id)) {
+            if let (Some(new_src), Some(new_tgt)) = (
+                node_id_map.get(&link.source_id),
+                node_id_map.get(&link.target_id),
+            ) {
                 let new_id = Uuid::new_v4().to_string();
                 tx.execute(
                     "INSERT INTO links (id, project_id, source_id, target_id, label, direction, link_type, weight, sort_order, config, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
@@ -106,7 +114,10 @@ impl Database {
 
         // 8. 创建分组成员
         for member in &data.graph.group_members {
-            if let (Some(new_group), Some(new_node)) = (group_id_map.get(&member.group_id), node_id_map.get(&member.node_id)) {
+            if let (Some(new_group), Some(new_node)) = (
+                group_id_map.get(&member.group_id),
+                node_id_map.get(&member.node_id),
+            ) {
                 tx.execute(
                     "INSERT OR IGNORE INTO group_members (group_id, node_id) VALUES (?1, ?2)",
                     params![new_group, new_node],

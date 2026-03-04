@@ -1,8 +1,8 @@
-use rusqlite::{Result, params};
-use crate::models::{Group, GroupMember};
 use crate::db::Database;
-use uuid::Uuid;
+use crate::models::{Group, GroupMember};
 use chrono::Utc;
+use rusqlite::{params, Result};
+use uuid::Uuid;
 
 impl Database {
     pub fn create_group(&self, project_id: &str, name: &str, color: &str) -> Result<Group> {
@@ -35,13 +35,15 @@ impl Database {
         conn.query_row(
             "SELECT id, project_id, name, color, created_at FROM groups WHERE id = ?1",
             params![id],
-            |row| Ok(Group {
-                id: row.get(0)?,
-                project_id: row.get(1)?,
-                name: row.get(2)?,
-                color: row.get(3)?,
-                created_at: row.get(4)?,
-            }),
+            |row| {
+                Ok(Group {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    name: row.get(2)?,
+                    color: row.get(3)?,
+                    created_at: row.get(4)?,
+                })
+            },
         )
     }
 
@@ -57,14 +59,17 @@ impl Database {
             "SELECT id, project_id, name, color, created_at FROM groups WHERE project_id = ?1 ORDER BY created_at ASC",
         )?;
 
-        let rows = stmt.query_map(params![project_id], |row| Ok(Group {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            name: row.get(2)?,
-            color: row.get(3)?,
-            created_at: row.get(4)?,
-        }))?
-        .collect::<Result<Vec<_>>>();
+        let rows = stmt
+            .query_map(params![project_id], |row| {
+                Ok(Group {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    name: row.get(2)?,
+                    color: row.get(3)?,
+                    created_at: row.get(4)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>();
 
         rows
     }
@@ -97,11 +102,14 @@ impl Database {
              WHERE g.project_id = ?1",
         )?;
 
-        let rows = stmt.query_map(params![project_id], |row| Ok(GroupMember {
-            group_id: row.get(0)?,
-            node_id: row.get(1)?,
-        }))?
-        .collect::<Result<Vec<_>>>();
+        let rows = stmt
+            .query_map(params![project_id], |row| {
+                Ok(GroupMember {
+                    group_id: row.get(0)?,
+                    node_id: row.get(1)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>();
 
         rows
     }

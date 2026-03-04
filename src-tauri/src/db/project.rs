@@ -1,8 +1,8 @@
-use rusqlite::{Result, params};
-use crate::models::Project;
 use crate::db::Database;
-use uuid::Uuid;
+use crate::models::Project;
 use chrono::Utc;
+use rusqlite::{params, Result};
+use uuid::Uuid;
 
 impl Database {
     pub fn create_project(&self, name: &str, description: &str) -> Result<Project> {
@@ -50,7 +50,10 @@ impl Database {
 
     pub fn update_project_config(&self, id: &str, config: Option<&str>) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("UPDATE projects SET config = ?1 WHERE id = ?2", params![config, id])?;
+        conn.execute(
+            "UPDATE projects SET config = ?1 WHERE id = ?2",
+            params![config, id],
+        )?;
         Ok(())
     }
 
@@ -66,15 +69,18 @@ impl Database {
             "SELECT id, name, description, config, created_at, updated_at FROM projects ORDER BY updated_at DESC",
         )?;
 
-        let rows = stmt.query_map([], |row| Ok(Project {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            description: row.get(2)?,
-            config: row.get(3)?,
-            created_at: row.get(4)?,
-            updated_at: row.get(5)?,
-        }))?
-        .collect::<Result<Vec<_>>>();
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(Project {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    description: row.get(2)?,
+                    config: row.get(3)?,
+                    created_at: row.get(4)?,
+                    updated_at: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>();
 
         rows
     }

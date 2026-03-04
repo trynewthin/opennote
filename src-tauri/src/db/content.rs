@@ -1,8 +1,8 @@
-use rusqlite::{Result, params};
-use crate::models::{Content, NodeContentRel};
 use crate::db::Database;
-use uuid::Uuid;
+use crate::models::{Content, NodeContentRel};
 use chrono::Utc;
+use rusqlite::{params, Result};
+use uuid::Uuid;
 
 impl Database {
     /// 创建一个内容块
@@ -67,7 +67,10 @@ impl Database {
     /// 更新内容配置
     pub fn update_content_config(&self, id: &str, config: Option<&str>) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("UPDATE contents SET config = ?1 WHERE id = ?2", params![config, id])?;
+        conn.execute(
+            "UPDATE contents SET config = ?1 WHERE id = ?2",
+            params![config, id],
+        )?;
         Ok(())
     }
 
@@ -86,22 +89,30 @@ impl Database {
              FROM contents WHERE project_id = ?1 ORDER BY created_at ASC",
         )?;
 
-        let rows = stmt.query_map(params![project_id], |row| Ok(Content {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            content_type: row.get(2)?,
-            value_text: row.get(3)?,
-            value_number: row.get(4)?,
-            config: row.get(5)?,
-            created_at: row.get(6)?,
-        }))?
-        .collect::<Result<Vec<_>>>();
+        let rows = stmt
+            .query_map(params![project_id], |row| {
+                Ok(Content {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    content_type: row.get(2)?,
+                    value_text: row.get(3)?,
+                    value_number: row.get(4)?,
+                    config: row.get(5)?,
+                    created_at: row.get(6)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>();
 
         rows
     }
 
     /// 将内容关联到某个节点
-    pub fn add_content_to_node(&self, node_id: &str, content_id: &str, sort_order: i64) -> Result<()> {
+    pub fn add_content_to_node(
+        &self,
+        node_id: &str,
+        content_id: &str,
+        sort_order: i64,
+    ) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
             "INSERT INTO node_content_rels (node_id, content_id, sort_order, rel_x, rel_y)
@@ -129,7 +140,11 @@ impl Database {
         }
 
         let conn = self.conn.lock().unwrap();
-        let placeholders: Vec<String> = node_ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect();
+        let placeholders: Vec<String> = node_ids
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("?{}", i + 1))
+            .collect();
         let sql = format!(
             "SELECT node_id, content_id, sort_order, rel_x, rel_y
              FROM node_content_rels WHERE node_id IN ({}) ORDER BY sort_order ASC",
@@ -137,22 +152,34 @@ impl Database {
         );
 
         let mut stmt = conn.prepare(&sql)?;
-        let params: Vec<&dyn rusqlite::types::ToSql> = node_ids.iter().map(|id| id as &dyn rusqlite::types::ToSql).collect();
+        let params: Vec<&dyn rusqlite::types::ToSql> = node_ids
+            .iter()
+            .map(|id| id as &dyn rusqlite::types::ToSql)
+            .collect();
 
-        let rows = stmt.query_map(params.as_slice(), |row| Ok(NodeContentRel {
-            node_id: row.get(0)?,
-            content_id: row.get(1)?,
-            sort_order: row.get(2)?,
-            rel_x: row.get(3)?,
-            rel_y: row.get(4)?,
-        }))?
-        .collect::<Result<Vec<_>>>();
+        let rows = stmt
+            .query_map(params.as_slice(), |row| {
+                Ok(NodeContentRel {
+                    node_id: row.get(0)?,
+                    content_id: row.get(1)?,
+                    sort_order: row.get(2)?,
+                    rel_x: row.get(3)?,
+                    rel_y: row.get(4)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>();
 
         rows
     }
 
     /// 更新内容关联的相对位置
-    pub fn update_content_rel_position(&self, node_id: &str, content_id: &str, rel_x: f64, rel_y: f64) -> Result<()> {
+    pub fn update_content_rel_position(
+        &self,
+        node_id: &str,
+        content_id: &str,
+        rel_x: f64,
+        rel_y: f64,
+    ) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
             "UPDATE node_content_rels SET rel_x = ?3, rel_y = ?4 WHERE node_id = ?1 AND content_id = ?2",

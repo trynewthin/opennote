@@ -305,7 +305,38 @@
 .settings-about__desc {
     font-size: 14px;
     color: #71717a;
-    margin: 0;
+    margin: 0 0 20px;
+}
+
+.settings-about__update-btn {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+    background: #18181b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-about__update-btn:hover:not(:disabled) {
+    background: #27272a;
+}
+
+.settings-about__update-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+:is(.dark) .settings-about__update-btn {
+    background: #e4e4e7;
+    color: #18181b;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+:is(.dark) .settings-about__update-btn:hover:not(:disabled) {
+    background: #fafafa;
 }
 
 /* ─── Timeline ─── */

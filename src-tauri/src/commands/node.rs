@@ -1,6 +1,6 @@
-use tauri::State;
 use crate::db::Database;
-use crate::models::{Node, GraphData};
+use crate::models::{GraphData, Node};
+use tauri::State;
 
 #[tauri::command]
 pub fn get_graph_data(db: State<Database>, project_id: String) -> Result<GraphData, String> {
@@ -26,7 +26,8 @@ pub fn update_node(db: State<Database>, id: String, title: String) -> Result<Nod
 
 #[tauri::command]
 pub fn update_node_position(db: State<Database>, id: String, x: f64, y: f64) -> Result<(), String> {
-    db.update_node_position(&id, x, y).map_err(|e| e.to_string())
+    db.update_node_position(&id, x, y)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -35,8 +36,13 @@ pub fn delete_node(db: State<Database>, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn search_nodes(db: State<Database>, project_id: String, query: String) -> Result<Vec<Node>, String> {
-    db.search_nodes(&project_id, &query).map_err(|e| e.to_string())
+pub fn search_nodes(
+    db: State<Database>,
+    project_id: String,
+    query: String,
+) -> Result<Vec<Node>, String> {
+    db.search_nodes(&project_id, &query)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -45,6 +51,11 @@ pub fn batch_delete_nodes(db: State<Database>, ids: Vec<String>) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn update_node_config(db: State<Database>, id: String, config: Option<String>) -> Result<(), String> {
-    db.update_node_config(&id, config.as_deref()).map_err(|e| e.to_string())
+pub fn update_node_config(
+    db: State<Database>,
+    id: String,
+    config: Option<String>,
+) -> Result<(), String> {
+    db.update_node_config(&id, config.as_deref())
+        .map_err(|e| e.to_string())
 }

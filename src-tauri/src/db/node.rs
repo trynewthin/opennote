@@ -1,8 +1,8 @@
-use rusqlite::{Result, params};
-use crate::models::Node;
 use crate::db::Database;
-use uuid::Uuid;
+use crate::models::Node;
 use chrono::Utc;
+use rusqlite::{params, Result};
+use uuid::Uuid;
 
 impl Database {
     pub fn create_node(&self, project_id: &str, title: &str, x: f64, y: f64) -> Result<Node> {
@@ -20,7 +20,8 @@ impl Database {
             id,
             project_id: project_id.to_string(),
             title: title.to_string(),
-            x, y,
+            x,
+            y,
             config: None,
             created_at: now,
             updated_at: now,
@@ -45,13 +46,19 @@ impl Database {
 
     pub fn update_node_position(&self, id: &str, x: f64, y: f64) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("UPDATE nodes SET x = ?1, y = ?2 WHERE id = ?3", params![x, y, id])?;
+        conn.execute(
+            "UPDATE nodes SET x = ?1, y = ?2 WHERE id = ?3",
+            params![x, y, id],
+        )?;
         Ok(())
     }
 
     pub fn update_node_config(&self, id: &str, config: Option<&str>) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("UPDATE nodes SET config = ?1 WHERE id = ?2", params![config, id])?;
+        conn.execute(
+            "UPDATE nodes SET config = ?1 WHERE id = ?2",
+            params![config, id],
+        )?;
         Ok(())
     }
 
@@ -76,7 +83,8 @@ impl Database {
              FROM nodes WHERE project_id = ?1 ORDER BY created_at DESC",
         )?;
 
-        let rows = stmt.query_map(params![project_id], Self::map_node)?
+        let rows = stmt
+            .query_map(params![project_id], Self::map_node)?
             .collect::<Result<Vec<_>>>();
         rows
     }
@@ -94,7 +102,8 @@ impl Database {
              ORDER BY n.updated_at DESC",
         )?;
 
-        let rows = stmt.query_map(params![project_id, pattern], Self::map_node)?
+        let rows = stmt
+            .query_map(params![project_id, pattern], Self::map_node)?
             .collect::<Result<Vec<_>>>();
         rows
     }

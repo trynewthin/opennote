@@ -1,8 +1,8 @@
-use rusqlite::{Result, params};
-use crate::models::Link;
 use crate::db::Database;
-use uuid::Uuid;
+use crate::models::Link;
 use chrono::Utc;
+use rusqlite::{params, Result};
+use uuid::Uuid;
 
 impl Database {
     pub fn create_link(
@@ -66,7 +66,10 @@ impl Database {
 
     pub fn update_link_config(&self, id: &str, config: Option<&str>) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("UPDATE links SET config = ?1 WHERE id = ?2", params![config, id])?;
+        conn.execute(
+            "UPDATE links SET config = ?1 WHERE id = ?2",
+            params![config, id],
+        )?;
         Ok(())
     }
 
@@ -83,7 +86,8 @@ impl Database {
              FROM links WHERE project_id = ?1 ORDER BY sort_order ASC",
         )?;
 
-        let rows = stmt.query_map(params![project_id], Self::map_link)?
+        let rows = stmt
+            .query_map(params![project_id], Self::map_link)?
             .collect::<Result<Vec<_>>>();
 
         rows

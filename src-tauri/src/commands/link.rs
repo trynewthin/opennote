@@ -1,6 +1,6 @@
-use tauri::State;
 use crate::db::Database;
 use crate::models::Link;
+use tauri::State;
 
 #[tauri::command]
 pub fn create_link(
@@ -37,8 +37,15 @@ pub fn update_link(
     weight: f64,
     sort_order: i64,
 ) -> Result<Link, String> {
-    db.update_link(&id, label.as_deref(), &direction, &link_type, weight, sort_order)
-        .map_err(|e| e.to_string())
+    db.update_link(
+        &id,
+        label.as_deref(),
+        &direction,
+        &link_type,
+        weight,
+        sort_order,
+    )
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -47,6 +54,11 @@ pub fn delete_link(db: State<Database>, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn update_link_config(db: State<Database>, id: String, config: Option<String>) -> Result<(), String> {
-    db.update_link_config(&id, config.as_deref()).map_err(|e| e.to_string())
+pub fn update_link_config(
+    db: State<Database>,
+    id: String,
+    config: Option<String>,
+) -> Result<(), String> {
+    db.update_link_config(&id, config.as_deref())
+        .map_err(|e| e.to_string())
 }

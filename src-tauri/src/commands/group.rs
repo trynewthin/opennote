@@ -1,6 +1,6 @@
-use tauri::State;
 use crate::db::Database;
 use crate::models::Group;
+use tauri::State;
 
 #[tauri::command]
 pub fn create_group(
@@ -9,7 +9,8 @@ pub fn create_group(
     name: String,
     color: String,
 ) -> Result<Group, String> {
-    db.create_group(&project_id, &name, &color).map_err(|e| e.to_string())
+    db.create_group(&project_id, &name, &color)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -19,7 +20,8 @@ pub fn update_group(
     name: String,
     color: String,
 ) -> Result<Group, String> {
-    db.update_group(&id, &name, &color).map_err(|e| e.to_string())
+    db.update_group(&id, &name, &color)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -33,7 +35,8 @@ pub fn add_node_to_group(
     group_id: String,
     node_id: String,
 ) -> Result<(), String> {
-    db.add_node_to_group(&group_id, &node_id).map_err(|e| e.to_string())
+    db.add_node_to_group(&group_id, &node_id)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -42,5 +45,6 @@ pub fn remove_node_from_group(
     group_id: String,
     node_id: String,
 ) -> Result<(), String> {
-    db.remove_node_from_group(&group_id, &node_id).map_err(|e| e.to_string())
+    db.remove_node_from_group(&group_id, &node_id)
+        .map_err(|e| e.to_string())
 }

@@ -6,7 +6,7 @@ pub struct Project {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub config: Option<String>,      // JSON 主题/配置
+    pub config: Option<String>, // JSON 主题/配置
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -19,7 +19,7 @@ pub struct Node {
     pub title: String,
     pub x: f64,
     pub y: f64,
-    pub config: Option<String>,      // JSON 主题/配置
+    pub config: Option<String>, // JSON 主题/配置
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -36,7 +36,7 @@ pub struct Link {
     pub link_type: String,
     pub weight: f64,
     pub sort_order: i64,
-    pub config: Option<String>,      // JSON 主题/配置
+    pub config: Option<String>, // JSON 主题/配置
     pub created_at: i64,
 }
 
@@ -45,10 +45,10 @@ pub struct Link {
 pub struct Content {
     pub id: String,
     pub project_id: String,
-    pub content_type: String,       // "text" | "image" | "audio" | "video" | "file"
+    pub content_type: String, // "text" | "image" | "audio" | "video" | "file"
     pub value_text: Option<String>,
     pub value_number: Option<f64>,
-    pub config: Option<String>,      // JSON 主题/配置
+    pub config: Option<String>, // JSON 主题/配置
     pub created_at: i64,
 }
 

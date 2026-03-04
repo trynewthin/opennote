@@ -90,7 +90,39 @@ function AppearanceSettings() {
 }
 
 
+import { check } from "@tauri-apps/plugin-updater";
+import { ask, message } from "@tauri-apps/plugin-dialog";
+import { relaunch } from "@tauri-apps/plugin-process";
+
 function AboutSettings() {
+    const [isChecking, setIsChecking] = useState(false);
+
+    const handleCheckUpdate = async () => {
+        try {
+            setIsChecking(true);
+            const update = await check();
+            if (update) {
+                const yes = await ask(`发现新版本 v${update.version}！\n\n更新内容：\n${update.body || '无详细说明'}\n\n是否立即下载并重启安装？`, {
+                    title: '发现新版本',
+                    kind: 'info',
+                    okLabel: '更新',
+                    cancelLabel: '取消'
+                });
+                if (yes) {
+                    await update.downloadAndInstall();
+                    await relaunch();
+                }
+            } else {
+                await message('当前已经是最新版本了', { title: '检查更新', kind: 'info' });
+            }
+        } catch (error) {
+            console.error("Failed to check for updates:", error);
+            await message(`检查更新失败: ${error}`, { title: '错误', kind: 'error' });
+        } finally {
+            setIsChecking(false);
+        }
+    };
+
     return (
         <div className="settings-section">
             <div className="settings-about">
@@ -99,6 +131,13 @@ function AboutSettings() {
                 <p className="settings-about__desc">
                     知识图谱笔记工具
                 </p>
+                <button
+                    className="settings-about__update-btn"
+                    onClick={handleCheckUpdate}
+                    disabled={isChecking}
+                >
+                    {isChecking ? "检查中..." : "检查更新"}
+                </button>
             </div>
 
             <div className="settings-timeline">
