@@ -25,3 +25,9 @@ dist-ssr
 .memory
 .gitdoc
 nul
+log
+
+# Tauri build artifacts & secrets
+src-tauri/target
+src-tauri/.env
+src-tauri/gen
