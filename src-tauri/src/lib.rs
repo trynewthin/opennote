@@ -1,5 +1,7 @@
+mod application;
 mod commands;
 mod db;
+mod error;
 mod models;
 
 use db::Database;
@@ -55,15 +57,15 @@ pub fn run() {
             commands::node::batch_delete_nodes,
             commands::node::update_node_config,
             // 内容
-            commands::content::create_content,
-            commands::content::update_content,
-            commands::content::delete_content,
-            commands::content::get_contents_by_project,
-            commands::content::add_content_to_node,
-            commands::content::remove_content_from_node,
-            commands::content::get_node_content_rels,
-            commands::content::update_content_rel_position,
-            commands::content::update_content_config,
+            commands::content::entity_commands::create_content,
+            commands::content::entity_commands::update_content,
+            commands::content::entity_commands::delete_content,
+            commands::content::entity_commands::get_contents_by_project,
+            commands::content::relation_commands::add_content_to_node,
+            commands::content::relation_commands::remove_content_from_node,
+            commands::content::relation_commands::get_node_content_rels,
+            commands::content::relation_commands::update_content_rel_position,
+            commands::content::entity_commands::update_content_config,
             // 关联
             commands::link::create_link,
             commands::link::update_link,

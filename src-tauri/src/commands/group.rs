@@ -1,3 +1,5 @@
+use crate::application::GroupService;
+use crate::commands::{into_command_result, CommandResult};
 use crate::db::Database;
 use crate::models::Group;
 use tauri::State;
@@ -8,9 +10,8 @@ pub fn create_group(
     project_id: String,
     name: String,
     color: String,
-) -> Result<Group, String> {
-    db.create_group(&project_id, &name, &color)
-        .map_err(|e| e.to_string())
+) -> CommandResult<Group> {
+    into_command_result(GroupService::new(db.inner()).create(&project_id, &name, &color))
 }
 
 #[tauri::command]
@@ -19,14 +20,13 @@ pub fn update_group(
     id: String,
     name: String,
     color: String,
-) -> Result<Group, String> {
-    db.update_group(&id, &name, &color)
-        .map_err(|e| e.to_string())
+) -> CommandResult<Group> {
+    into_command_result(GroupService::new(db.inner()).update(&id, &name, &color))
 }
 
 #[tauri::command]
-pub fn delete_group(db: State<Database>, id: String) -> Result<(), String> {
-    db.delete_group(&id).map_err(|e| e.to_string())
+pub fn delete_group(db: State<Database>, id: String) -> CommandResult<()> {
+    into_command_result(GroupService::new(db.inner()).delete(&id))
 }
 
 #[tauri::command]
@@ -34,9 +34,8 @@ pub fn add_node_to_group(
     db: State<Database>,
     group_id: String,
     node_id: String,
-) -> Result<(), String> {
-    db.add_node_to_group(&group_id, &node_id)
-        .map_err(|e| e.to_string())
+) -> CommandResult<()> {
+    into_command_result(GroupService::new(db.inner()).add_node(&group_id, &node_id))
 }
 
 #[tauri::command]
@@ -44,7 +43,6 @@ pub fn remove_node_from_group(
     db: State<Database>,
     group_id: String,
     node_id: String,
-) -> Result<(), String> {
-    db.remove_node_from_group(&group_id, &node_id)
-        .map_err(|e| e.to_string())
+) -> CommandResult<()> {
+    into_command_result(GroupService::new(db.inner()).remove_node(&group_id, &node_id))
 }

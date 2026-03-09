@@ -1,10 +1,12 @@
+use crate::application::{GraphService, NodeService};
+use crate::commands::{into_command_result, CommandResult};
 use crate::db::Database;
 use crate::models::{GraphData, Node};
 use tauri::State;
 
 #[tauri::command]
-pub fn get_graph_data(db: State<Database>, project_id: String) -> Result<GraphData, String> {
-    db.get_graph_data(&project_id).map_err(|e| e.to_string())
+pub fn get_graph_data(db: State<Database>, project_id: String) -> CommandResult<GraphData> {
+    into_command_result(GraphService::new(db.inner()).get_project_graph(&project_id))
 }
 
 #[tauri::command]
@@ -14,25 +16,23 @@ pub fn create_node(
     title: String,
     x: f64,
     y: f64,
-) -> Result<Node, String> {
-    db.create_node(&project_id, &title, x, y)
-        .map_err(|e| e.to_string())
+) -> CommandResult<Node> {
+    into_command_result(NodeService::new(db.inner()).create(&project_id, &title, x, y))
 }
 
 #[tauri::command]
-pub fn update_node(db: State<Database>, id: String, title: String) -> Result<Node, String> {
-    db.update_node(&id, &title).map_err(|e| e.to_string())
+pub fn update_node(db: State<Database>, id: String, title: String) -> CommandResult<Node> {
+    into_command_result(NodeService::new(db.inner()).update(&id, &title))
 }
 
 #[tauri::command]
-pub fn update_node_position(db: State<Database>, id: String, x: f64, y: f64) -> Result<(), String> {
-    db.update_node_position(&id, x, y)
-        .map_err(|e| e.to_string())
+pub fn update_node_position(db: State<Database>, id: String, x: f64, y: f64) -> CommandResult<()> {
+    into_command_result(NodeService::new(db.inner()).update_position(&id, x, y))
 }
 
 #[tauri::command]
-pub fn delete_node(db: State<Database>, id: String) -> Result<(), String> {
-    db.delete_node(&id).map_err(|e| e.to_string())
+pub fn delete_node(db: State<Database>, id: String) -> CommandResult<()> {
+    into_command_result(NodeService::new(db.inner()).delete(&id))
 }
 
 #[tauri::command]
@@ -40,14 +40,13 @@ pub fn search_nodes(
     db: State<Database>,
     project_id: String,
     query: String,
-) -> Result<Vec<Node>, String> {
-    db.search_nodes(&project_id, &query)
-        .map_err(|e| e.to_string())
+) -> CommandResult<Vec<Node>> {
+    into_command_result(NodeService::new(db.inner()).search(&project_id, &query))
 }
 
 #[tauri::command]
-pub fn batch_delete_nodes(db: State<Database>, ids: Vec<String>) -> Result<(), String> {
-    db.batch_delete_nodes(&ids).map_err(|e| e.to_string())
+pub fn batch_delete_nodes(db: State<Database>, ids: Vec<String>) -> CommandResult<()> {
+    into_command_result(NodeService::new(db.inner()).batch_delete(&ids))
 }
 
 #[tauri::command]
@@ -55,7 +54,6 @@ pub fn update_node_config(
     db: State<Database>,
     id: String,
     config: Option<String>,
-) -> Result<(), String> {
-    db.update_node_config(&id, config.as_deref())
-        .map_err(|e| e.to_string())
+) -> CommandResult<()> {
+    into_command_result(NodeService::new(db.inner()).update_config(&id, config.as_deref()))
 }
