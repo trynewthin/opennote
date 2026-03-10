@@ -1,190 +1,122 @@
+import { configService } from "@/services/configService";
 import { useGraphStore } from "@/stores/graphStore";
-import { graphApi } from "@/services/graphApi";
+import type { RelationSemanticConfig } from "@/types";
 
 export function GraphContextMenus() {
     const {
-        contextMenu, closeContextMenu, setNodeExpanded, createNode, deleteNode,
-        expandedNodeIds, startRenameNode, links, deleteLink,
-        openEditContentDialog, openAddContentDialog,
+        contextMenu,
+        closeContextMenu,
+        createNode,
+        deleteNode,
+        startEditNode,
+        openEditNodeDialog,
+        relations,
+        deleteRelation,
+        updateRelation,
     } = useGraphStore();
 
     if (!contextMenu.show) return null;
 
-    const isExpanded = contextMenu.targetId ? expandedNodeIds.includes(contextMenu.targetId) : false;
+    const currentRelation =
+        contextMenu.type === "relation" && contextMenu.targetId
+            ? relations.find((relation) => relation.id === contextMenu.targetId)
+            : null;
+    const currentDirection =
+        configService.parse<RelationSemanticConfig>(currentRelation?.semantic_config ?? null, {})?.direction ?? "none";
 
-    // Find link for direction display
-    const currentLink = contextMenu.type === "link" && contextMenu.targetId
-        ? links.find((l) => l.id === contextMenu.targetId)
-        : null;
-
-    const changeLinkDirection = async (direction: string) => {
-        if (!currentLink) return;
-        try {
-            const updated = await graphApi.updateLink(
-                currentLink.id,
-                currentLink.label,
-                direction,
-                currentLink.link_type,
-                currentLink.weight,
-                currentLink.sort_order,
-            );
-            // Update store
-            useGraphStore.setState((s) => ({
-                links: s.links.map((l) => (l.id === updated.id ? updated : l)),
-            }));
-        } catch (err) {
-            console.error("Failed to update link direction:", err);
-        }
+    const changeRelationDirection = async (direction: "none" | "forward" | "backward") => {
+        if (!currentRelation) return;
+        await updateRelation(currentRelation.id, currentRelation.content, direction);
         closeContextMenu();
     };
 
     return (
         <div
             className="graph-context-overlay"
-            onContextMenu={(e) => {
-                e.preventDefault();
+            onContextMenu={(event) => {
+                event.preventDefault();
                 closeContextMenu();
             }}
             onClick={closeContextMenu}
         >
             <div
                 style={{ position: "absolute", left: contextMenu.x, top: contextMenu.y }}
-                onClick={(e) => e.stopPropagation()}
-                onContextMenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                onClick={(event) => event.stopPropagation()}
+                onContextMenu={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
                 }}
             >
-                {/* ─── 空白区域 ─── */}
                 {contextMenu.type === "canvas" && (
                     <div className="graph-context-menu">
                         <ContextMenuItem
                             onClick={() => {
-                                createNode("新节点");
+                                createNode("New node");
                                 closeContextMenu();
                             }}
                         >
-                            添加节点
+                            Add node
                         </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem>整理</ContextMenuItem>
                     </div>
                 )}
 
-                {/* ─── 节点 ─── */}
                 {contextMenu.type === "node" && (
                     <div className="graph-context-menu">
                         <ContextMenuItem
                             onClick={() => {
-                                if (contextMenu.targetId) {
-                                    startRenameNode(contextMenu.targetId);
-                                }
+                                if (contextMenu.targetId) startEditNode(contextMenu.targetId);
                                 closeContextMenu();
                             }}
                         >
-                            重命名
+                            Quick edit
                         </ContextMenuItem>
                         <ContextMenuItem
                             onClick={() => {
-                                if (contextMenu.targetId) {
-                                    openAddContentDialog(contextMenu.targetId);
-                                }
+                                if (contextMenu.targetId) openEditNodeDialog(contextMenu.targetId);
                                 closeContextMenu();
                             }}
                         >
-                            添加内容
-                        </ContextMenuItem>
-                        <ContextMenuItem
-                            onClick={() => {
-                                if (contextMenu.targetId) {
-                                    setNodeExpanded(contextMenu.targetId, !isExpanded);
-                                }
-                                closeContextMenu();
-                            }}
-                        >
-                            {isExpanded ? "隐藏内容" : "显示内容"}
+                            Edit node
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
                             danger
                             onClick={() => {
-                                if (contextMenu.targetId) {
-                                    deleteNode(contextMenu.targetId);
-                                }
+                                if (contextMenu.targetId) void deleteNode(contextMenu.targetId);
                                 closeContextMenu();
                             }}
                         >
-                            删除
+                            Delete node
                         </ContextMenuItem>
                     </div>
                 )}
 
-                {/* ─── 内容 ─── */}
-                {contextMenu.type === "content" && (
+                {contextMenu.type === "relation" && currentRelation && (
                     <div className="graph-context-menu">
-                        <ContextMenuItem
-                            onClick={() => {
-                                if (contextMenu.targetId) {
-                                    openEditContentDialog(contextMenu.targetId);
-                                }
-                                closeContextMenu();
-                            }}
-                        >
-                            编辑
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem
-                            danger
-                            onClick={async () => {
-                                if (contextMenu.targetId) {
-                                    try {
-                                        await graphApi.deleteContent(contextMenu.targetId);
-                                        useGraphStore.setState((s) => ({
-                                            contents: s.contents.filter((c) => c.id !== contextMenu.targetId),
-                                            nodeContentRels: s.nodeContentRels.filter((r) => r.content_id !== contextMenu.targetId),
-                                        }));
-                                    } catch (err) {
-                                        console.error("Failed to delete content:", err);
-                                    }
-                                }
-                                closeContextMenu();
-                            }}
-                        >
-                            删除
-                        </ContextMenuItem>
-                    </div>
-                )}
-
-                {/* ─── 连线 ─── */}
-                {contextMenu.type === "link" && currentLink && (
-                    <div className="graph-context-menu">
-                        <ContextMenuItem
-                            active={currentLink.direction === "none"}
-                            onClick={() => changeLinkDirection("none")}
-                        >
-                            无箭头
+                        <ContextMenuItem active={currentDirection === "none"} onClick={() => void changeRelationDirection("none")}>
+                            No direction
                         </ContextMenuItem>
                         <ContextMenuItem
-                            active={currentLink.direction === "forward"}
-                            onClick={() => changeLinkDirection("forward")}
+                            active={currentDirection === "forward"}
+                            onClick={() => void changeRelationDirection("forward")}
                         >
-                            →
+                            Forward
                         </ContextMenuItem>
                         <ContextMenuItem
-                            active={currentLink.direction === "backward"}
-                            onClick={() => changeLinkDirection("backward")}
+                            active={currentDirection === "backward"}
+                            onClick={() => void changeRelationDirection("backward")}
                         >
-                            ←
+                            Backward
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
                             danger
                             onClick={() => {
-                                deleteLink(currentLink.id);
+                                void deleteRelation(currentRelation.id);
                                 closeContextMenu();
                             }}
                         >
-                            解除关联
+                            Delete relation
                         </ContextMenuItem>
                     </div>
                 )}
@@ -193,7 +125,17 @@ export function GraphContextMenus() {
     );
 }
 
-function ContextMenuItem({ children, onClick, danger, active }: { children: React.ReactNode; onClick?: () => void; danger?: boolean; active?: boolean }) {
+function ContextMenuItem({
+    children,
+    onClick,
+    danger,
+    active,
+}: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    danger?: boolean;
+    active?: boolean;
+}) {
     return (
         <div
             className={`graph-context-item ${danger ? "graph-context-item--danger" : ""} ${active ? "graph-context-item--active" : ""}`}

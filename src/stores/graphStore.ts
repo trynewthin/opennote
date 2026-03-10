@@ -1,6 +1,15 @@
 import { create } from "zustand";
-import type { Node, Link, Content, NodeContentRel, Group, GroupMember } from "@/types";
+import { invalidateNodeResourceMetadata } from "@/lib/nodeResourceCache";
 import { graphApi } from "@/services/graphApi";
+import { configService } from "@/services/configService";
+import type {
+    Group,
+    GroupMember,
+    Node,
+    NodeViewConfig,
+    Relation,
+    RelationSemanticConfig,
+} from "@/types";
 
 interface Transform {
     x: number;
@@ -14,94 +23,82 @@ interface ContextMenuState {
     y: number;
     worldX: number;
     worldY: number;
-    type: "canvas" | "node" | "content" | "link";
+    type: "canvas" | "node" | "relation";
     targetId?: string;
-    parentNodeId?: string;
 }
 
 interface SelectionState {
-    type: "node" | "content" | "link" | null;
+    type: "node" | "relation" | null;
     id: string | null;
 }
 
 interface GraphState {
-    // 数据层
     nodes: Node[];
-    links: Link[];
-    contents: Content[];
-    nodeContentRels: NodeContentRel[];
+    relations: Relation[];
     groups: Group[];
     groupMembers: GroupMember[];
     currentProjectId: string | null;
 
-    // 交互呈现层
     transform: Transform;
-    expandedNodeIds: string[];
     selection: SelectionState;
     contextMenu: ContextMenuState;
     editingNodeId: string | null;
-    addContentDialog: { open: boolean; nodeId: string | null };
-    editContentDialog: { open: boolean; contentId: string | null };
+    editNodeDialog: { open: boolean; nodeId: string | null };
 
-    // Action - 初始化与同步
     loadGraphData: (projectId: string) => Promise<void>;
-    createNode: (title: string) => Promise<void>;
+    createNode: (content: string, nodeType?: string) => Promise<void>;
     deleteNode: (nodeId: string) => Promise<void>;
-    renameNode: (nodeId: string, title: string) => Promise<void>;
+    updateNode: (nodeId: string, nodeType: string, content: string) => Promise<void>;
     updateNodePosition: (nodeId: string, x: number, y: number) => void;
-    addContentToNode: (nodeId: string, contentType: string, valueText: string | null) => Promise<void>;
-    updateContentRelPosition: (nodeId: string, contentId: string, relX: number, relY: number) => void;
 
-    // Action - 连线
-    createLink: (sourceId: string, targetId: string) => Promise<void>;
-    updateLink: (linkId: string, label: string | null, direction: string, linkType: string, weight: number, sortOrder: number) => Promise<void>;
-    deleteLink: (linkId: string) => Promise<void>;
+    createRelation: (sourceId: string, targetId: string, relationType?: string) => Promise<void>;
+    updateRelation: (
+        relationId: string,
+        content: string | null,
+        direction: "none" | "forward" | "backward",
+    ) => Promise<void>;
+    deleteRelation: (relationId: string) => Promise<void>;
 
-    // Action - 内容对话框
-    openAddContentDialog: (nodeId: string) => void;
-    closeAddContentDialog: () => void;
-    openEditContentDialog: (contentId: string) => void;
-    closeEditContentDialog: () => void;
-    updateContent: (contentId: string, contentType: string, valueText: string | null) => Promise<void>;
+    openEditNodeDialog: (nodeId: string) => void;
+    closeEditNodeDialog: () => void;
 
-    // Action - 画布操作
     setTransform: (transform: Transform) => void;
     zoomIn: () => void;
     zoomOut: () => void;
     resetView: () => void;
 
-    // Action - 展开操作
-    toggleNodeExpanded: (nodeId: string) => void;
-    setNodeExpanded: (nodeId: string, expanded: boolean) => void;
-
-    // Action - 选中与菜单
     setSelection: (selection: SelectionState) => void;
     openContextMenu: (state: Omit<ContextMenuState, "show">) => void;
     closeContextMenu: () => void;
-    startRenameNode: (nodeId: string) => void;
-    cancelRename: () => void;
+    startEditNode: (nodeId: string) => void;
+    cancelEditNode: () => void;
+}
+
+function parseRelationSemantic(relation: Relation): RelationSemanticConfig {
+    return configService.parse<RelationSemanticConfig>(relation.semantic_config, {}) ?? {};
+}
+
+function patchRaw<T extends Record<string, unknown>>(raw: string | null, patch: Partial<T>): string | null {
+    return configService.stringify(configService.merge<T>(raw, patch));
 }
 
 export const useGraphStore = create<GraphState>((set, get) => ({
     nodes: [],
-    links: [],
-    contents: [],
-    nodeContentRels: [],
+    relations: [],
     groups: [],
     groupMembers: [],
     currentProjectId: null,
 
     transform: { x: 0, y: 0, scale: 1 },
-    expandedNodeIds: [],
     selection: { type: null, id: null },
     contextMenu: { show: false, x: 0, y: 0, worldX: 0, worldY: 0, type: "canvas" },
     editingNodeId: null,
-    addContentDialog: { open: false, nodeId: null },
-    editContentDialog: { open: false, contentId: null as string | null },
+    editNodeDialog: { open: false, nodeId: null },
 
     setTransform: (transform) => set({ transform }),
-    zoomIn: () => set((s) => ({ transform: { ...s.transform, scale: Math.min(s.transform.scale * 1.2, 4) } })),
-    zoomOut: () => set((s) => ({ transform: { ...s.transform, scale: Math.max(s.transform.scale / 1.2, 0.2) } })),
+    zoomIn: () => set((state) => ({ transform: { ...state.transform, scale: Math.min(state.transform.scale * 1.2, 4) } })),
+    zoomOut: () =>
+        set((state) => ({ transform: { ...state.transform, scale: Math.max(state.transform.scale / 1.2, 0.2) } })),
     resetView: () => set({ transform: { x: 0, y: 0, scale: 1 } }),
 
     loadGraphData: async (projectId: string) => {
@@ -110,171 +107,142 @@ export const useGraphStore = create<GraphState>((set, get) => ({
             set({
                 currentProjectId: projectId,
                 nodes: data.nodes,
-                links: data.links,
-                contents: data.contents,
-                nodeContentRels: data.node_content_rels,
+                relations: data.relations,
                 groups: data.groups,
-                groupMembers: data.group_members
+                groupMembers: data.group_members,
             });
         } catch (error) {
             console.error("Failed to load graph data:", error);
         }
     },
 
-    createNode: async (title: string) => {
+    createNode: async (content: string, nodeType = "concept") => {
         const { currentProjectId, contextMenu } = get();
         if (!currentProjectId) return;
-        const x = contextMenu.worldX || 0;
-        const y = contextMenu.worldY || 0;
         try {
-            const node = await graphApi.createNode(currentProjectId, title, x, y);
-            set((s) => ({ nodes: [...s.nodes, node] }));
+            const node = await graphApi.createNode(
+                currentProjectId,
+                nodeType,
+                content,
+                contextMenu.worldX || 0,
+                contextMenu.worldY || 0,
+            );
+            set((state) => ({ nodes: [...state.nodes, node] }));
         } catch (error) {
             console.error("Failed to create node:", error);
         }
     },
 
-    deleteNode: async (nodeId: string) => {
+    deleteNode: async (nodeId) => {
         try {
             await graphApi.deleteNode(nodeId);
-            set((s) => ({ nodes: s.nodes.filter((n) => n.id !== nodeId) }));
+            invalidateNodeResourceMetadata(nodeId);
+            set((state) => ({
+                nodes: state.nodes.filter((node) => node.id !== nodeId),
+                relations: state.relations.filter(
+                    (relation) => relation.source_id !== nodeId && relation.target_id !== nodeId,
+                ),
+                selection: state.selection.id === nodeId ? { type: null, id: null } : state.selection,
+            }));
         } catch (error) {
             console.error("Failed to delete node:", error);
         }
     },
 
-    renameNode: async (nodeId: string, title: string) => {
+    updateNode: async (nodeId, nodeType, content) => {
         try {
-            await graphApi.updateNode(nodeId, title);
-            set((s) => ({
-                nodes: s.nodes.map((n) => (n.id === nodeId ? { ...n, title } : n)),
+            const updated = await graphApi.updateNode(nodeId, nodeType, content);
+            invalidateNodeResourceMetadata(nodeId);
+            set((state) => ({
+                nodes: state.nodes.map((node) => (node.id === nodeId ? updated : node)),
                 editingNodeId: null,
             }));
         } catch (error) {
-            console.error("Failed to rename node:", error);
+            console.error("Failed to update node:", error);
         }
     },
 
-    updateNodePosition: (nodeId: string, x: number, y: number) => {
-        set((s) => ({
-            nodes: s.nodes.map((n) => (n.id === nodeId ? { ...n, x, y } : n)),
+    updateNodePosition: (nodeId, x, y) => {
+        const node = get().nodes.find((item) => item.id === nodeId);
+        if (!node) return;
+        const nextViewConfig = patchRaw<NodeViewConfig>(node.view_config, { x, y });
+        set((state) => ({
+            nodes: state.nodes.map((item) => (item.id === nodeId ? { ...item, view_config: nextViewConfig } : item)),
         }));
-        graphApi.updateNodePosition(nodeId, x, y).catch((err) => {
-            console.error("Failed to persist node position:", err);
+        graphApi.updateNodePosition(nodeId, x, y).catch((error) => {
+            console.error("Failed to persist node position:", error);
         });
     },
 
-    addContentToNode: async (nodeId: string, contentType: string, valueText: string | null) => {
-        const { currentProjectId } = get();
-        if (!currentProjectId) return;
-        try {
-            const content = await graphApi.createContent(currentProjectId, contentType, valueText, null);
-            const sortOrder = get().nodeContentRels.filter((r) => r.node_id === nodeId).length;
-            await graphApi.addContentToNode(nodeId, content.id, sortOrder);
-            set((s) => ({
-                contents: [...s.contents, content],
-                nodeContentRels: [...s.nodeContentRels, { node_id: nodeId, content_id: content.id, sort_order: sortOrder, rel_x: 0, rel_y: 0 }],
-                expandedNodeIds: s.expandedNodeIds.includes(nodeId) ? s.expandedNodeIds : [...s.expandedNodeIds, nodeId],
-            }));
-        } catch (error) {
-            console.error("Failed to add content:", error);
-        }
-    },
-
-    updateContentRelPosition: (nodeId: string, contentId: string, relX: number, relY: number) => {
-        set((s) => ({
-            nodeContentRels: s.nodeContentRels.map((r) =>
-                r.node_id === nodeId && r.content_id === contentId
-                    ? { ...r, rel_x: relX, rel_y: relY }
-                    : r
-            ),
-        }));
-        graphApi.updateContentRelPosition(nodeId, contentId, relX, relY).catch(console.error);
-    },
-
-    openEditContentDialog: (contentId) => set({ editContentDialog: { open: true, contentId } }),
-    closeEditContentDialog: () => set({ editContentDialog: { open: false, contentId: null } }),
-
-    updateContent: async (contentId, contentType, valueText) => {
-        try {
-            const updated = await graphApi.updateContent(contentId, contentType, valueText, null);
-            set((s) => ({
-                contents: s.contents.map((c) => (c.id === contentId ? updated : c)),
-            }));
-        } catch (error) {
-            console.error("Failed to update content:", error);
-        }
-    },
-
-    toggleNodeExpanded: (nodeId) => {
-        set((state) => {
-            const expanded = state.expandedNodeIds.includes(nodeId);
-            if (expanded) {
-                return { expandedNodeIds: state.expandedNodeIds.filter(id => id !== nodeId) };
-            } else {
-                return { expandedNodeIds: [...state.expandedNodeIds, nodeId] };
-            }
-        });
-    },
-
-    setNodeExpanded: (nodeId, expanded) => {
-        set((state) => {
-            const isExpanded = state.expandedNodeIds.includes(nodeId);
-            if (expanded && !isExpanded) {
-                return { expandedNodeIds: [...state.expandedNodeIds, nodeId] };
-            } else if (!expanded && isExpanded) {
-                return { expandedNodeIds: state.expandedNodeIds.filter(id => id !== nodeId) };
-            }
-            return state;
-        });
-    },
-
-    setSelection: (selection) => set({ selection }),
-
-    openContextMenu: (state) => set({ contextMenu: { ...state, show: true } }),
-
-    closeContextMenu: () => set((state) => ({ contextMenu: { ...state.contextMenu, show: false } })),
-
-    startRenameNode: (nodeId: string) => set({ editingNodeId: nodeId }),
-    cancelRename: () => set({ editingNodeId: null }),
-
-    openAddContentDialog: (nodeId: string) => set({ addContentDialog: { open: true, nodeId } }),
-    closeAddContentDialog: () => set({ addContentDialog: { open: false, nodeId: null } }),
-
-    createLink: async (sourceId: string, targetId: string) => {
-        const { currentProjectId, links } = get();
-        if (!currentProjectId) return;
-        // 防止重复连线
-        const exists = links.some(
-            (l) => (l.source_id === sourceId && l.target_id === targetId) ||
-                (l.source_id === targetId && l.target_id === sourceId)
+    createRelation: async (sourceId, targetId, relationType = "related") => {
+        const { currentProjectId, relations } = get();
+        if (!currentProjectId || sourceId === targetId) return;
+        const exists = relations.some(
+            (relation) =>
+                relation.relation_type === relationType &&
+                ((relation.source_id === sourceId && relation.target_id === targetId) ||
+                    (relation.source_id === targetId && relation.target_id === sourceId)),
         );
         if (exists) return;
+
         try {
-            const link = await graphApi.createLink(currentProjectId, sourceId, targetId, null, "none", "related", 0.5, 0);
-            set((s) => ({ links: [...s.links, link] }));
+            const relation = await graphApi.createRelation(
+                currentProjectId,
+                sourceId,
+                targetId,
+                relationType,
+                null,
+                configService.stringify({ direction: "none", weight: 0.5 }),
+                null,
+            );
+            set((state) => ({ relations: [...state.relations, relation] }));
         } catch (error) {
-            console.error("Failed to create link:", error);
+            console.error("Failed to create relation:", error);
         }
     },
 
-    deleteLink: async (linkId: string) => {
+    deleteRelation: async (relationId) => {
         try {
-            await graphApi.deleteLink(linkId);
-            set((s) => ({ links: s.links.filter((l) => l.id !== linkId) }));
-        } catch (error) {
-            console.error("Failed to delete link:", error);
-        }
-    },
-
-    updateLink: async (linkId: string, label: string | null, direction: string, linkType: string, weight: number, sortOrder: number) => {
-        try {
-            const updated = await graphApi.updateLink(linkId, label, direction, linkType, weight, sortOrder);
-            set((s) => ({
-                links: s.links.map((l) => (l.id === linkId ? updated : l)),
+            await graphApi.deleteRelation(relationId);
+            set((state) => ({
+                relations: state.relations.filter((relation) => relation.id !== relationId),
+                selection: state.selection.id === relationId ? { type: null, id: null } : state.selection,
             }));
         } catch (error) {
-            console.error("Failed to update link:", error);
+            console.error("Failed to delete relation:", error);
         }
     },
+
+    updateRelation: async (relationId, content, direction) => {
+        const relation = get().relations.find((item) => item.id === relationId);
+        if (!relation) return;
+        const semanticConfig = configService.stringify({
+            ...parseRelationSemantic(relation),
+            direction,
+        });
+        try {
+            const updated = await graphApi.updateRelation(
+                relationId,
+                relation.relation_type,
+                content,
+                semanticConfig,
+                relation.view_config,
+            );
+            set((state) => ({
+                relations: state.relations.map((item) => (item.id === relationId ? updated : item)),
+            }));
+        } catch (error) {
+            console.error("Failed to update relation:", error);
+        }
+    },
+
+    openEditNodeDialog: (nodeId) => set({ editNodeDialog: { open: true, nodeId } }),
+    closeEditNodeDialog: () => set({ editNodeDialog: { open: false, nodeId: null } }),
+
+    setSelection: (selection) => set({ selection }),
+    openContextMenu: (state) => set({ contextMenu: { ...state, show: true } }),
+    closeContextMenu: () => set((state) => ({ contextMenu: { ...state.contextMenu, show: false } })),
+
+    startEditNode: (nodeId) => set({ editingNodeId: nodeId }),
+    cancelEditNode: () => set({ editingNodeId: null }),
 }));

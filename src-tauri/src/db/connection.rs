@@ -13,7 +13,6 @@ impl Database {
         conn.execute_batch("PRAGMA journal_mode=WAL;")?;
         conn.execute_batch(TABLE_DEFS)?;
         conn.execute_batch(INDEX_DEFS)?;
-
         conn.execute_batch("PRAGMA foreign_keys = ON;")?;
 
         Ok(Self {

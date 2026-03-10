@@ -1,7 +1,7 @@
 use crate::application::{GraphService, NodeService};
 use crate::commands::{into_command_result, CommandResult};
 use crate::db::Database;
-use crate::models::{GraphData, Node};
+use crate::models::{GraphData, Node, NodeResourceMetadata};
 use tauri::State;
 
 #[tauri::command]
@@ -13,16 +13,28 @@ pub fn get_graph_data(db: State<Database>, project_id: String) -> CommandResult<
 pub fn create_node(
     db: State<Database>,
     project_id: String,
-    title: String,
+    node_type: String,
+    content: String,
     x: f64,
     y: f64,
 ) -> CommandResult<Node> {
-    into_command_result(NodeService::new(db.inner()).create(&project_id, &title, x, y))
+    into_command_result(NodeService::new(db.inner()).create(
+        &project_id,
+        &node_type,
+        &content,
+        x,
+        y,
+    ))
 }
 
 #[tauri::command]
-pub fn update_node(db: State<Database>, id: String, title: String) -> CommandResult<Node> {
-    into_command_result(NodeService::new(db.inner()).update(&id, &title))
+pub fn update_node(
+    db: State<Database>,
+    id: String,
+    node_type: String,
+    content: String,
+) -> CommandResult<Node> {
+    into_command_result(NodeService::new(db.inner()).update(&id, &node_type, &content))
 }
 
 #[tauri::command]
@@ -50,10 +62,27 @@ pub fn batch_delete_nodes(db: State<Database>, ids: Vec<String>) -> CommandResul
 }
 
 #[tauri::command]
-pub fn update_node_config(
+pub fn update_node_view_config(
     db: State<Database>,
     id: String,
     config: Option<String>,
 ) -> CommandResult<()> {
-    into_command_result(NodeService::new(db.inner()).update_config(&id, config.as_deref()))
+    into_command_result(NodeService::new(db.inner()).update_view_config(&id, config.as_deref()))
+}
+
+#[tauri::command]
+pub fn update_node_semantic_config(
+    db: State<Database>,
+    id: String,
+    config: Option<String>,
+) -> CommandResult<()> {
+    into_command_result(NodeService::new(db.inner()).update_semantic_config(&id, config.as_deref()))
+}
+
+#[tauri::command]
+pub fn get_node_resource_metadata(
+    db: State<Database>,
+    node_id: String,
+) -> CommandResult<NodeResourceMetadata> {
+    into_command_result(NodeService::new(db.inner()).get_resource_metadata(&node_id))
 }

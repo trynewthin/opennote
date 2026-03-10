@@ -6,7 +6,6 @@ import { useThemeStore } from "@/stores/themeStore";
 import { configService } from "@/services/configService";
 import { ArrowLeft, Sun, Moon, ZoomIn, ZoomOut, Locate } from "lucide-react";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
-import { AddContentDialog } from "@/components/graph/AddContentDialog";
 import { EditContentDialog } from "@/components/graph/EditContentDialog";
 
 import "./GraphPage.css";
@@ -16,12 +15,11 @@ export function GraphPage() {
     const navigate = useNavigate();
     const { loadGraphData, zoomIn, zoomOut, resetView, setTransform } = useGraphStore();
     const { projects, fetchProjects } = useProjectStore();
-    const project = projects.find((p) => p.id === projectId);
-    const projectName = project?.name ?? "—";
+    const project = projects.find((item) => item.id === projectId);
+    const projectName = project?.name ?? "Untitled Project";
     const { theme, toggleTheme } = useThemeStore();
     const isDark = theme === "dark";
 
-    // Keep a ref to current project for cleanup
     const projectRef = useRef(project);
     projectRef.current = project;
 
@@ -35,7 +33,6 @@ export function GraphPage() {
         }
     }, [projectId, loadGraphData]);
 
-    // Restore viewport from project config
     useEffect(() => {
         if (!project?.config) return;
         const cfg = configService.parse<{ viewX?: number; viewY?: number; viewScale?: number }>(project.config);
@@ -46,19 +43,20 @@ export function GraphPage() {
                 scale: cfg.viewScale ?? 1,
             });
         }
-    }, [project?.id]); // only on project change, not every config update
+    }, [project?.id, project?.config, setTransform]);
 
-    // Save viewport to project config on unmount
     useEffect(() => {
         return () => {
-            const p = projectRef.current;
-            if (!p) return;
+            const currentProject = projectRef.current;
+            if (!currentProject) return;
             const { transform } = useGraphStore.getState();
-            configService.patch("project", p.id, p.config, {
-                viewX: transform.x,
-                viewY: transform.y,
-                viewScale: transform.scale,
-            }).catch(console.error);
+            configService
+                .patch("project", currentProject.id, currentProject.config, {
+                    viewX: transform.x,
+                    viewY: transform.y,
+                    viewScale: transform.scale,
+                })
+                .catch(console.error);
         };
     }, [projectId]);
 
@@ -67,51 +65,45 @@ export function GraphPage() {
     }
 
     return (
-        <div className="flex h-screen w-full flex-col overflow-hidden bg-background relative">
-            {/* ── Floating toolbar ── */}
+        <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background">
             <header className="graph-header">
-                {/* Left: back + project name */}
                 <div className="graph-toolbar graph-toolbar--left">
-                    <button
-                        className="graph-toolbar__btn"
-                        onClick={() => navigate("/")}
-                        title="返回项目列表"
-                    >
+                    <button className="graph-toolbar__btn" onClick={() => navigate("/")} title="Back to projects">
                         <ArrowLeft className="graph-toolbar__icon" />
                     </button>
                     <span className="graph-toolbar__divider" />
                     <span className="graph-toolbar__title">{projectName}</span>
                 </div>
 
-                {/* Right: zoom + theme */}
                 <div className="graph-toolbar graph-toolbar--right">
-                    <button className="graph-toolbar__btn" onClick={zoomIn} title="放大">
+                    <button className="graph-toolbar__btn" onClick={zoomIn} title="Zoom in">
                         <ZoomIn className="graph-toolbar__icon" />
                     </button>
-                    <button className="graph-toolbar__btn" onClick={zoomOut} title="缩小">
+                    <button className="graph-toolbar__btn" onClick={zoomOut} title="Zoom out">
                         <ZoomOut className="graph-toolbar__icon" />
                     </button>
-                    <button className="graph-toolbar__btn" onClick={resetView} title="重置视图">
+                    <button className="graph-toolbar__btn" onClick={resetView} title="Reset view">
                         <Locate className="graph-toolbar__icon" />
                     </button>
                     <span className="graph-toolbar__divider" />
                     <button
                         className="graph-toolbar__btn"
                         onClick={toggleTheme}
-                        title={isDark ? "切换浅色模式" : "切换深色模式"}
+                        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
                     >
-                        {isDark
-                            ? <Sun className="graph-toolbar__icon graph-toolbar__icon--sun" />
-                            : <Moon className="graph-toolbar__icon graph-toolbar__icon--moon" />}
+                        {isDark ? (
+                            <Sun className="graph-toolbar__icon graph-toolbar__icon--sun" />
+                        ) : (
+                            <Moon className="graph-toolbar__icon graph-toolbar__icon--moon" />
+                        )}
                     </button>
                 </div>
             </header>
 
-            <main className="flex-1 relative w-full overflow-hidden">
+            <main className="relative flex-1 overflow-hidden">
                 <GraphCanvas />
             </main>
 
-            <AddContentDialog />
             <EditContentDialog />
         </div>
     );

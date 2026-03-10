@@ -1,13 +1,11 @@
-mod content;
 mod graph;
 mod group;
-mod link;
 mod node;
 mod project;
+mod relation;
 
-pub use content::{Content, NodeContentRel};
 pub use graph::{GraphData, ProjectExport, ProjectExportMeta};
 pub use group::{Group, GroupMember};
-pub use link::Link;
-pub use node::Node;
+pub use node::{Node, NodeResourceMetadata};
 pub use project::Project;
+pub use relation::Relation;

@@ -37,7 +37,7 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
     return (
         <>
             <Card
-                className="project-card group cursor-pointer backdrop-blur-xl bg-card/60 dark:bg-white/6 border border-black/8 dark:border-white/8 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/12 dark:hover:border-white/12"
+                className="project-card group cursor-pointer border border-black/8 bg-card/60 backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-black/12 dark:border-white/8 dark:bg-white/6 dark:hover:border-white/12"
                 onClick={() => onOpen?.(project)}
             >
                 <CardHeader>
@@ -49,8 +49,8 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
                                     <Button
                                         variant="ghost"
                                         size="icon-xs"
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={(e) => e.stopPropagation()}
+                                        className="opacity-0 transition-opacity group-hover:opacity-100"
+                                        onClick={(event) => event.stopPropagation()}
                                     />
                                 }
                             >
@@ -58,61 +58,53 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" side="bottom" sideOffset={4}>
                                 <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation();
+                                    onClick={(event) => {
+                                        event.stopPropagation();
                                         setEditOpen(true);
                                     }}
                                 >
                                     <Pencil />
-                                    编辑
+                                    Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation();
+                                    onClick={(event) => {
+                                        event.stopPropagation();
                                         setExportOpen(true);
                                     }}
                                 >
                                     <Download />
-                                    导出
+                                    Export
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     variant="destructive"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
+                                    onClick={(event) => {
+                                        event.stopPropagation();
                                         setDeleteOpen(true);
                                     }}
                                 >
                                     <Trash2 />
-                                    删除
+                                    Delete
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </CardAction>
-                    {project.description && (
-                        <CardDescription className="line-clamp-2">
-                            {project.description}
-                        </CardDescription>
-                    )}
+                    {project.description && <CardDescription className="line-clamp-2">{project.description}</CardDescription>}
                 </CardHeader>
 
-                <CardFooter className="text-xs text-muted-foreground gap-4 bg-black/[0.02] dark:bg-white/[0.03]">
+                <CardFooter className="gap-4 bg-black/[0.02] text-xs text-muted-foreground dark:bg-white/[0.03]">
                     <span className="inline-flex items-center gap-1">
                         <StickyNote className="size-3" />
-                        {noteCount} 笔记
+                        {noteCount} notes
                     </span>
-                    <span className="inline-flex items-center gap-1 ml-auto">
+                    <span className="ml-auto inline-flex items-center gap-1">
                         <Clock className="size-3" />
                         {timeAgo}
                     </span>
                 </CardFooter>
             </Card>
 
-            <ProjectFormDialog
-                open={editOpen}
-                onOpenChange={setEditOpen}
-                project={project}
-            />
+            <ProjectFormDialog open={editOpen} onOpenChange={setEditOpen} project={project} />
             <DeleteProjectDialog
                 open={deleteOpen}
                 onOpenChange={setDeleteOpen}
@@ -138,10 +130,10 @@ function formatRelativeTime(timestampMs: number): string {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (seconds < 60) return "刚刚";
-    if (minutes < 60) return `${minutes} 分钟前`;
-    if (hours < 24) return `${hours} 小时前`;
-    if (days < 30) return `${days} 天前`;
+    if (seconds < 60) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 30) return `${days}d ago`;
 
     const date = new Date(timestampMs);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;

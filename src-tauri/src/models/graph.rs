@@ -1,12 +1,10 @@
-use super::{Content, Group, GroupMember, Link, Node, NodeContentRel};
+use super::{Group, GroupMember, Node, Relation};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphData {
     pub nodes: Vec<Node>,
-    pub links: Vec<Link>,
-    pub contents: Vec<Content>,
-    pub node_content_rels: Vec<NodeContentRel>,
+    pub relations: Vec<Relation>,
     pub groups: Vec<Group>,
     pub group_members: Vec<GroupMember>,
 }

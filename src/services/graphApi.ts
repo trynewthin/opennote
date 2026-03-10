@@ -1,94 +1,118 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { GraphData, Node, Link, Content, NodeContentRel, Group } from "@/types";
+import type { GraphData, Group, Node, NodeResourceMetadata, Relation } from "@/types";
 
 export const graphApi = {
-    // --------------------------------------------------------
-    // 全局图谱
-    // --------------------------------------------------------
     async getGraphData(projectId: string): Promise<GraphData> {
         return invoke("get_graph_data", { projectId });
     },
 
-    // --------------------------------------------------------
-    // 节点 Node
-    // --------------------------------------------------------
-    async createNode(projectId: string, title: string, x: number, y: number): Promise<Node> {
-        return invoke("create_node", { projectId, title, x, y });
+    async createNode(
+        projectId: string,
+        nodeType: string,
+        content: string,
+        x: number,
+        y: number,
+    ): Promise<Node> {
+        return invoke("create_node", { projectId, nodeType, content, x, y });
     },
-    async updateNode(id: string, title: string): Promise<Node> {
-        return invoke("update_node", { id, title });
+
+    async updateNode(id: string, nodeType: string, content: string): Promise<Node> {
+        return invoke("update_node", { id, nodeType, content });
     },
+
     async updateNodePosition(id: string, x: number, y: number): Promise<void> {
         return invoke("update_node_position", { id, x, y });
     },
+
+    async updateNodeViewConfig(id: string, config: string | null): Promise<void> {
+        return invoke("update_node_view_config", { id, config });
+    },
+
+    async updateNodeSemanticConfig(id: string, config: string | null): Promise<void> {
+        return invoke("update_node_semantic_config", { id, config });
+    },
+
     async deleteNode(id: string): Promise<void> {
         return invoke("delete_node", { id });
     },
+
     async searchNodes(projectId: string, query: string): Promise<Node[]> {
         return invoke("search_nodes", { projectId, query });
     },
+
     async batchDeleteNodes(ids: string[]): Promise<void> {
         return invoke("batch_delete_nodes", { ids });
     },
 
-    // --------------------------------------------------------
-    // 内容 Content
-    // --------------------------------------------------------
-    async createContent(projectId: string, contentType: string, valueText: string | null, valueNumber: number | null): Promise<Content> {
-        return invoke("create_content", { projectId, contentType, valueText, valueNumber });
-    },
-    async updateContent(id: string, contentType: string, valueText: string | null, valueNumber: number | null): Promise<Content> {
-        return invoke("update_content", { id, contentType, valueText, valueNumber });
-    },
-    async deleteContent(id: string): Promise<void> {
-        return invoke("delete_content", { id });
-    },
-    async getContentsByProject(projectId: string): Promise<Content[]> {
-        return invoke("get_contents_by_project", { projectId });
-    },
-    // 绑定/解绑
-    async addContentToNode(nodeId: string, contentId: string, sortOrder: number): Promise<void> {
-        return invoke("add_content_to_node", { nodeId, contentId, sortOrder });
-    },
-    async removeContentFromNode(nodeId: string, contentId: string): Promise<void> {
-        return invoke("remove_content_from_node", { nodeId, contentId });
-    },
-    async updateContentRelPosition(nodeId: string, contentId: string, relX: number, relY: number): Promise<void> {
-        return invoke("update_content_rel_position", { nodeId, contentId, relX, relY });
-    },
-    async getNodeContentRels(nodeIds: string[]): Promise<NodeContentRel[]> {
-        return invoke("get_node_content_rels", { nodeIds });
+    async getNodeResourceMetadata(nodeId: string): Promise<NodeResourceMetadata> {
+        return invoke("get_node_resource_metadata", { nodeId });
     },
 
-    // --------------------------------------------------------
-    // 连线 Link
-    // --------------------------------------------------------
-    async createLink(projectId: string, sourceId: string, targetId: string, label: string | null, direction: string, linkType: string, weight: number, sortOrder: number): Promise<Link> {
-        return invoke("create_link", { projectId, sourceId, targetId, label, direction, linkType, weight, sortOrder });
-    },
-    async updateLink(id: string, label: string | null, direction: string, linkType: string, weight: number, sortOrder: number): Promise<Link> {
-        return invoke("update_link", { id, label, direction, linkType, weight, sortOrder });
-    },
-    async deleteLink(id: string): Promise<void> {
-        return invoke("delete_link", { id });
+    async createRelation(
+        projectId: string,
+        sourceId: string,
+        targetId: string,
+        relationType: string,
+        content: string | null,
+        semanticConfig: string | null,
+        viewConfig: string | null,
+    ): Promise<Relation> {
+        return invoke("create_relation", {
+            projectId,
+            sourceId,
+            targetId,
+            relationType,
+            content,
+            semanticConfig,
+            viewConfig,
+        });
     },
 
-    // --------------------------------------------------------
-    // 分组 Group
-    // --------------------------------------------------------
+    async updateRelation(
+        id: string,
+        relationType: string,
+        content: string | null,
+        semanticConfig: string | null,
+        viewConfig: string | null,
+    ): Promise<Relation> {
+        return invoke("update_relation", {
+            id,
+            relationType,
+            content,
+            semanticConfig,
+            viewConfig,
+        });
+    },
+
+    async updateRelationViewConfig(id: string, config: string | null): Promise<void> {
+        return invoke("update_relation_view_config", { id, config });
+    },
+
+    async updateRelationSemanticConfig(id: string, config: string | null): Promise<void> {
+        return invoke("update_relation_semantic_config", { id, config });
+    },
+
+    async deleteRelation(id: string): Promise<void> {
+        return invoke("delete_relation", { id });
+    },
+
     async createGroup(projectId: string, name: string, color: string): Promise<Group> {
         return invoke("create_group", { projectId, name, color });
     },
+
     async updateGroup(id: string, name: string, color: string): Promise<Group> {
         return invoke("update_group", { id, name, color });
     },
+
     async deleteGroup(id: string): Promise<void> {
         return invoke("delete_group", { id });
     },
+
     async addNodeToGroup(groupId: string, nodeId: string): Promise<void> {
         return invoke("add_node_to_group", { groupId, nodeId });
     },
+
     async removeNodeFromGroup(groupId: string, nodeId: string): Promise<void> {
         return invoke("remove_node_from_group", { groupId, nodeId });
-    }
+    },
 };

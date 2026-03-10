@@ -16,8 +16,7 @@ import { ImportExportDialog } from "@/components/project/ImportExportDialog";
 import type { Project } from "@/types";
 
 export function ProjectsPage() {
-    const { projects, noteCounts, loading, error, fetchProjects } =
-        useProjectStore();
+    const { projects, noteCounts, loading, error, fetchProjects } = useProjectStore();
     const [createOpen, setCreateOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
@@ -33,96 +32,83 @@ export function ProjectsPage() {
     };
 
     return (
-        <div className="relative h-screen bg-background overflow-hidden flex flex-col">
-            {/* 背景大字 */}
+        <div className="relative flex h-screen flex-col overflow-hidden bg-background">
             <span
                 aria-hidden="true"
-                className="pointer-events-none select-none absolute bottom-0 left-0 text-[clamp(8rem,20vw,16rem)] font-black leading-none tracking-tighter text-foreground/[0.03] -translate-x-2 translate-y-[0.1em]"
+                className="pointer-events-none absolute bottom-0 left-0 select-none text-[clamp(8rem,20vw,16rem)] font-black leading-none tracking-tighter text-foreground/[0.03] -translate-x-2 translate-y-[0.1em]"
             >
-                OPenNote
+                OpenNote
             </span>
 
-            {/* 内容区域 — 内部滚动 */}
             <main className="relative z-10 flex-1 overflow-y-auto">
                 <div className="mx-auto max-w-6xl px-6 py-6">
-                    {/* 标题栏 */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h1 className="text-lg font-semibold">项目管理</h1>
+                    <div className="mb-6 flex items-center justify-between">
+                        <h1 className="text-lg font-semibold">Projects</h1>
                         <div className="flex items-center gap-2">
                             <Button variant="outline" onClick={() => setImportOpen(true)}>
                                 <Upload className="size-4" data-icon="inline-start" />
-                                导入
+                                Import
                             </Button>
                             <Button onClick={() => setCreateOpen(true)}>
                                 <Plus className="size-4" data-icon="inline-start" />
-                                新建项目
+                                New Project
                             </Button>
                             <DropdownMenu>
-                                <DropdownMenuTrigger
-                                    render={
-                                        <Button variant="outline" size="icon" />
-                                    }
-                                >
+                                <DropdownMenuTrigger render={<Button variant="outline" size="icon" />}>
                                     <Menu className="size-4" />
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" sideOffset={4}>
                                     <DropdownMenuItem onClick={toggleTheme}>
-                                        {theme === "dark" ? (
-                                            <Sun className="size-4" />
-                                        ) : (
-                                            <Moon className="size-4" />
-                                        )}
-                                        {theme === "dark" ? "浅色模式" : "深色模式"}
+                                        {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                                        {theme === "dark" ? "Light Mode" : "Dark Mode"}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                                         <Settings className="size-4" />
-                                        设置
+                                        Settings
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
                     </div>
+
                     {error && (
                         <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                            加载失败：{error}
+                            Failed to load projects: {error}
                         </div>
                     )}
 
-                    {/* 加载状态 */}
                     {loading && projects.length === 0 && (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {[...Array(6)].map((_, i) => (
+                            {[...Array(6)].map((_, index) => (
                                 <div
-                                    key={i}
+                                    key={index}
                                     className="h-[140px] animate-pulse rounded-xl bg-muted/50 ring-1 ring-foreground/5"
                                 />
                             ))}
                         </div>
                     )}
 
-                    {/* 空状态 */}
                     {!loading && projects.length === 0 && !error && (
                         <div className="flex flex-col items-center justify-center py-24">
-                            <div className="flex size-16 items-center justify-center rounded-2xl bg-muted mb-6 empty-state-icon">
+                            <div className="empty-state-icon mb-6 flex size-16 items-center justify-center rounded-2xl bg-muted">
                                 <FolderOpen className="size-8 text-muted-foreground" />
                             </div>
-                            <h2 className="text-lg font-medium mb-2">还没有项目</h2>
-                            <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs">
-                                创建你的第一个知识图谱项目，开始组织和关联你的笔记。
+                            <h2 className="mb-2 text-lg font-medium">No projects yet</h2>
+                            <p className="mb-6 max-w-xs text-center text-sm text-muted-foreground">
+                                Create your first knowledge graph project and start organizing your notes.
                             </p>
                             <Button onClick={() => setCreateOpen(true)} size="lg">
                                 <Plus className="size-4" data-icon="inline-start" />
-                                创建第一个项目
+                                Create First Project
                             </Button>
                         </div>
                     )}
 
-                    {/* 项目网格 */}
                     {projects.length > 0 && (
                         <>
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-sm font-medium text-muted-foreground">
-                                    共 {projects.length} 个项目
+                                    {projects.length} projects
                                 </h2>
                             </div>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -140,13 +126,8 @@ export function ProjectsPage() {
                 </div>
             </main>
 
-            {/* 新建弹窗 */}
             <ProjectFormDialog open={createOpen} onOpenChange={setCreateOpen} />
-
-            {/* 设置对话框 */}
             {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
-
-            {/* 导入对话框 */}
             {importOpen && (
                 <ImportExportDialog
                     mode="import"

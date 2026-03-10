@@ -1,77 +1,92 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { DEFAULT_NODE_TYPE_OPTIONS } from "@/lib/nodeDisplay";
 import { useGraphStore } from "@/stores/graphStore";
 
 import "./EditContentDialog.css";
 
 export function EditContentDialog() {
-    const { editContentDialog, closeEditContentDialog, updateContent, contents } = useGraphStore();
+    const { editNodeDialog, closeEditNodeDialog, updateNode, nodes } = useGraphStore();
+    const node = nodes.find((item) => item.id === editNodeDialog.nodeId);
 
-    const content = contents.find((c) => c.id === editContentDialog.contentId);
-
-    const [valueText, setValueText] = useState("");
+    const [nodeType, setNodeType] = useState("concept");
+    const [content, setContent] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
-        if (editContentDialog.open && content) {
-            setValueText(content.value_text || "");
+        if (editNodeDialog.open && node) {
+            setNodeType(node.node_type);
+            setContent(node.content);
         }
-    }, [editContentDialog.open, content?.id]);
+    }, [editNodeDialog.open, node]);
 
     const handleSubmit = async () => {
-        if (!content) return;
+        if (!node) return;
         setSubmitting(true);
         try {
-            await updateContent(content.id, content.content_type, valueText || null);
-            closeEditContentDialog();
-        } catch (e) {
-            console.error("编辑内容失败:", e);
+            await updateNode(node.id, nodeType, content);
+            closeEditNodeDialog();
+        } catch (error) {
+            console.error("Failed to update node:", error);
         } finally {
             setSubmitting(false);
         }
     };
 
-    if (!editContentDialog.open) return null;
+    if (!editNodeDialog.open) return null;
 
     return (
         <div className="edit-content-overlay" onClick={handleSubmit}>
-            <div className="edit-content-dialog" onClick={(e) => e.stopPropagation()}>
-                {/* Header: title left, buttons right */}
+            <div className="edit-content-dialog" onClick={(event) => event.stopPropagation()}>
                 <header className="edit-content-dialog__header">
-                    <h2 className="edit-content-dialog__title">编辑</h2>
+                    <h2 className="edit-content-dialog__title">Edit Node</h2>
                     <div className="edit-content-dialog__actions">
                         <button
                             className="edit-content-dialog__btn edit-content-dialog__btn--cancel"
-                            onClick={closeEditContentDialog}
+                            onClick={closeEditNodeDialog}
                             disabled={submitting}
                         >
-                            取消
+                            Cancel
                         </button>
                         <button
                             className="edit-content-dialog__btn edit-content-dialog__btn--save"
                             onClick={handleSubmit}
                             disabled={submitting}
                         >
-                            {submitting ? "保存中…" : "保存"}
+                            {submitting ? "Saving" : "Save"}
                         </button>
                     </div>
                 </header>
 
-                {/* Content area */}
-                <div className="edit-content-dialog__body">
-                    {content?.content_type === "text" ? (
+                <div className="edit-content-dialog__body gap-4">
+                    <div className="grid gap-2">
+                        <label className="text-sm font-medium">Node Type</label>
+                        <select
+                            className="edit-content-dialog__input"
+                            value={nodeType}
+                            onChange={(event) => setNodeType(event.target.value)}
+                        >
+                            {DEFAULT_NODE_TYPE_OPTIONS.map((item) => (
+                                <option key={item.value} value={item.value}>
+                                    {item.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {nodeType === "text" || nodeType === "note" || nodeType === "concept" ? (
                         <textarea
                             className="edit-content-dialog__textarea"
-                            placeholder="输入文本内容…"
-                            value={valueText}
-                            onChange={(e) => setValueText(e.target.value)}
+                            placeholder="Enter node content"
+                            value={content}
+                            onChange={(event) => setContent(event.target.value)}
                             autoFocus
                         />
                     ) : (
                         <input
                             className="edit-content-dialog__input"
-                            placeholder="文件路径…"
-                            value={valueText}
-                            onChange={(e) => setValueText(e.target.value)}
+                            placeholder="Enter file path or URL"
+                            value={content}
+                            onChange={(event) => setContent(event.target.value)}
                             autoFocus
                         />
                     )}
