@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { Project } from "@/types";
-import { useProjectStore } from "@/stores/projectStore";
+import { useTranslation } from "react-i18next";
+import type { ProjectSummary } from "@/types";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -17,26 +18,21 @@ import { TriangleAlert } from "lucide-react";
 interface DeleteProjectDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    project: Project;
-    noteCount: number;
+    project: ProjectSummary;
 }
 
-export function DeleteProjectDialog({
-    open,
-    onOpenChange,
-    project,
-    noteCount,
-}: DeleteProjectDialogProps) {
+export function DeleteProjectDialog({ open, onOpenChange, project }: DeleteProjectDialogProps) {
+    const { t } = useTranslation();
     const [deleting, setDeleting] = useState(false);
-    const { removeProject } = useProjectStore();
+    const { deleteProject } = useWorkspaceStore();
 
     const handleDelete = async () => {
         setDeleting(true);
         try {
-            await removeProject(project.id);
+            await deleteProject(project.path);
             onOpenChange(false);
-        } catch (e) {
-            console.error("删除失败:", e);
+        } catch (error) {
+            console.error("Delete failed:", error);
         } finally {
             setDeleting(false);
         }
@@ -44,35 +40,26 @@ export function DeleteProjectDialog({
 
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
-            <AlertDialogContent
-                size="sm"
-                onClick={(e) => e.stopPropagation()}
-            >
+            <AlertDialogContent size="sm" onClick={(event) => event.stopPropagation()}>
                 <AlertDialogHeader>
                     <AlertDialogMedia className="bg-destructive/10 text-destructive">
                         <TriangleAlert />
                     </AlertDialogMedia>
-                    <AlertDialogTitle>删除项目</AlertDialogTitle>
+                    <AlertDialogTitle>{t("deleteProject.title")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        确定要删除「<strong>{project.name}</strong>」吗？
-                        {noteCount > 0 && (
-                            <>
-                                该项目包含{" "}
-                                <strong className="text-destructive">{noteCount}</strong>{" "}
-                                条笔记，删除后将无法恢复。
-                            </>
-                        )}
+                        {t("deleteProject.confirmMsg", { name: project.name })}{" "}
+                        {t("deleteProject.noteWarning", { count: project.node_count })}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
                 <AlertDialogFooter>
-                    <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+                    <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
                     <AlertDialogAction
                         variant="destructive"
                         onClick={handleDelete}
                         disabled={deleting}
                     >
-                        {deleting ? "删除中…" : "确认删除"}
+                        {deleting ? t("deleteProject.deleting") : t("deleteProject.confirmDelete")}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

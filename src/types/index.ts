@@ -1,41 +1,51 @@
-export interface Project {
-    id: string;
+export type JsonObject = Record<string, unknown>;
+
+export interface ProjectSummary {
+    path: string;
     name: string;
     description: string;
-    config: string | null;
-    created_at: number;
     updated_at: number;
+    node_count: number;
+}
+
+export interface ProjectData {
+    on_version: string;
+    name: string;
+    description: string;
+    config: JsonObject;
+    nodes: Node[];
+    relations: Relation[];
+    groups: Group[];
+    group_members: GroupMember[];
+}
+
+export interface LoadedProject {
+    path: string;
+    data: ProjectData;
 }
 
 export interface Node {
     id: string;
-    project_id: string;
-    node_type: string;
+    type: string;
     content: string;
-    semantic_config: string | null;
-    view_config: string | null;
-    created_at: number;
-    updated_at: number;
+    semantic_config: JsonObject | null;
+    view_config: JsonObject | null;
 }
 
 export interface Relation {
     id: string;
-    project_id: string;
-    source_id: string;
-    target_id: string;
-    relation_type: string;
+    source: string;
+    target: string;
+    type: string;
     content: string | null;
-    semantic_config: string | null;
-    view_config: string | null;
-    created_at: number;
+    semantic_config: JsonObject | null;
+    view_config: JsonObject | null;
 }
 
 export interface Group {
     id: string;
-    project_id: string;
     name: string;
     color: string;
-    created_at: number;
 }
 
 export interface GroupMember {
@@ -50,7 +60,7 @@ export interface GraphData {
     group_members: GroupMember[];
 }
 
-export interface NodeViewConfig {
+export interface NodeViewConfig extends JsonObject {
     x?: number;
     y?: number;
     width?: number;
@@ -65,10 +75,10 @@ export interface NodeViewConfig {
     fontSize?: number;
     fontWeight?: string | number;
     opacity?: number;
-    [key: string]: unknown;
+    label?: string;
 }
 
-export interface RelationViewConfig {
+export interface RelationViewConfig extends JsonObject {
     relX?: number;
     relY?: number;
     sortOrder?: number;
@@ -77,13 +87,17 @@ export interface RelationViewConfig {
     width?: number;
     dashArray?: string;
     opacity?: number;
-    [key: string]: unknown;
 }
 
-export interface RelationSemanticConfig {
+export interface RelationSemanticConfig extends JsonObject {
     direction?: "none" | "forward" | "backward";
     weight?: number;
-    [key: string]: unknown;
+}
+
+export interface AppSettings {
+    language: string | null;
+    theme: "light" | "dark" | null;
+    recent_workspaces: string[];
 }
 
 export interface NodeResourceMetadata {

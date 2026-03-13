@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { Project } from "@/types";
+import { useTranslation } from "react-i18next";
+import type { ProjectSummary } from "@/types";
 import {
     Card,
     CardHeader,
@@ -16,23 +17,21 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, StickyNote, Clock, Download } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, StickyNote, Clock } from "lucide-react";
 import { ProjectFormDialog } from "./ProjectFormDialog";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
-import { ImportExportDialog } from "./ImportExportDialog";
 
 interface ProjectCardProps {
-    project: Project;
-    noteCount: number;
-    onOpen?: (project: Project) => void;
+    project: ProjectSummary;
+    onOpen?: (project: ProjectSummary) => void;
 }
 
-export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
+export function ProjectCard({ project, onOpen }: ProjectCardProps) {
+    const { t } = useTranslation();
     const [editOpen, setEditOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
-    const [exportOpen, setExportOpen] = useState(false);
 
-    const timeAgo = formatRelativeTime(project.updated_at);
+    const timeAgo = formatRelativeTime(t, project.updated_at);
 
     return (
         <>
@@ -64,16 +63,7 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
                                     }}
                                 >
                                     <Pencil />
-                                    Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        setExportOpen(true);
-                                    }}
-                                >
-                                    <Download />
-                                    Export
+                                    {t("common.edit")}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -84,7 +74,7 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
                                     }}
                                 >
                                     <Trash2 />
-                                    Delete
+                                    {t("common.delete")}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -95,7 +85,7 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
                 <CardFooter className="gap-4 bg-black/[0.02] text-xs text-muted-foreground dark:bg-white/[0.03]">
                     <span className="inline-flex items-center gap-1">
                         <StickyNote className="size-3" />
-                        {noteCount} notes
+                        {t("projects.noteCount", { count: project.node_count })}
                     </span>
                     <span className="ml-auto inline-flex items-center gap-1">
                         <Clock className="size-3" />
@@ -105,24 +95,12 @@ export function ProjectCard({ project, noteCount, onOpen }: ProjectCardProps) {
             </Card>
 
             <ProjectFormDialog open={editOpen} onOpenChange={setEditOpen} project={project} />
-            <DeleteProjectDialog
-                open={deleteOpen}
-                onOpenChange={setDeleteOpen}
-                project={project}
-                noteCount={noteCount}
-            />
-            {exportOpen && (
-                <ImportExportDialog
-                    mode="export"
-                    project={project}
-                    onClose={() => setExportOpen(false)}
-                />
-            )}
+            <DeleteProjectDialog open={deleteOpen} onOpenChange={setDeleteOpen} project={project} />
         </>
     );
 }
 
-function formatRelativeTime(timestampMs: number): string {
+function formatRelativeTime(t: (key: string, opts?: Record<string, unknown>) => string, timestampMs: number): string {
     const now = Date.now();
     const diff = now - timestampMs;
     const seconds = Math.floor(diff / 1000);
@@ -130,10 +108,10 @@ function formatRelativeTime(timestampMs: number): string {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (seconds < 60) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 30) return `${days}d ago`;
+    if (seconds < 60) return t("time.justNow");
+    if (minutes < 60) return t("time.minutesAgo", { count: minutes });
+    if (hours < 24) return t("time.hoursAgo", { count: hours });
+    if (days < 30) return t("time.daysAgo", { count: days });
 
     const date = new Date(timestampMs);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;

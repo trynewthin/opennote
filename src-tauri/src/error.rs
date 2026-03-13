@@ -6,21 +6,12 @@ pub enum AppError {
     Io(std::io::Error),
     Json(serde_json::Error),
     Zip(zip::result::ZipError),
-    InvalidArchive(String),
-    InvalidManifest(String),
+    NotFound(String),
+    Validation(String),
+    InvalidWorkspace(String),
 }
 
 pub type AppResult<T> = Result<T, AppError>;
-
-impl AppError {
-    pub fn invalid_archive<E: Display>(error: E) -> Self {
-        Self::InvalidArchive(format!("Invalid .on archive: {error}"))
-    }
-
-    pub fn invalid_manifest<E: Display>(error: E) -> Self {
-        Self::InvalidManifest(format!("Failed to parse manifest: {error}"))
-    }
-}
 
 impl Display for AppError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -29,7 +20,9 @@ impl Display for AppError {
             Self::Io(error) => error.fmt(f),
             Self::Json(error) => error.fmt(f),
             Self::Zip(error) => error.fmt(f),
-            Self::InvalidArchive(message) | Self::InvalidManifest(message) => message.fmt(f),
+            Self::NotFound(message)
+            | Self::Validation(message)
+            | Self::InvalidWorkspace(message) => message.fmt(f),
         }
     }
 }

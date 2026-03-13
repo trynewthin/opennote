@@ -3,9 +3,11 @@ import { useGraphStore } from "@/stores/graphStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { themeLoader } from "@/services/themeLoader";
 import { configService } from "@/services/configService";
+import { getNodeType } from "@/lib/nodeTypeRegistry";
 import type { Node, NodeViewConfig, Relation, RelationSemanticConfig } from "@/types";
 import { GraphContextMenus } from "./GraphContextMenus";
 import { GraphNode } from "./GraphNode";
+import { FilePreviewDialog } from "./FilePreviewDialog";
 
 function parseNodeView(node: Node): NodeViewConfig {
     return configService.parse<NodeViewConfig>(node.view_config, {}) ?? {};
@@ -28,6 +30,7 @@ export function GraphCanvas() {
         closeContextMenu,
         contextMenu,
         updateNodePosition,
+        updateNodeViewConfig,
         editingNodeId,
         updateNode,
         cancelEditNode,
@@ -39,7 +42,6 @@ export function GraphCanvas() {
     } = useGraphStore();
 
     const isDark = useThemeStore((state) => state.theme === "dark");
-
     const containerRef = useRef<HTMLDivElement>(null);
     const nodeMap = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
     const panState = useRef({ isPanning: false, startX: 0, startY: 0, startTx: 0, startTy: 0 });
@@ -55,10 +57,17 @@ export function GraphCanvas() {
     });
 
     const [dragPos, setDragPos] = useState<Record<string, { x: number; y: number }>>({});
+    const nodeSizes = useRef<Map<string, { w: number; h: number }>>(new Map());
     const [hoveredRelationId, setHoveredRelationId] = useState<string | null>(null);
     const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
     const [editingRelationContent, setEditingRelationContent] = useState("");
     const [relationSourceId, setRelationSourceId] = useState<string | null>(null);
+    const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
+    const clickTimer = useRef<{ nodeId: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+
+    const handleNodeSizeChange = useCallback((nodeId: string, width: number, height: number) => {
+        nodeSizes.current.set(nodeId, { w: width, h: height });
+    }, []);
 
     const getNodeWorldPosition = useCallback(
         (nodeId: string) => {
@@ -67,6 +76,43 @@ export function GraphCanvas() {
             return dragPos[nodeId] ?? nodePosition(node);
         },
         [dragPos, nodeMap],
+    );
+
+    const clampTransform = useCallback(
+        (tx: number, ty: number, scale: number): { x: number; y: number; scale: number } => {
+            if (nodes.length === 0) return { x: tx, y: ty, scale };
+
+            const canvas = containerRef.current;
+            const vw = canvas?.clientWidth ?? window.innerWidth;
+            const vh = canvas?.clientHeight ?? window.innerHeight;
+
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+
+            for (const node of nodes) {
+                const position = dragPos[node.id] ?? nodePosition(node);
+                const size = nodeSizes.current.get(node.id) ?? { w: 80, h: 32 };
+                minX = Math.min(minX, position.x - size.w / 2);
+                minY = Math.min(minY, position.y - size.h / 2);
+                maxX = Math.max(maxX, position.x + size.w / 2);
+                maxY = Math.max(maxY, position.y + size.h / 2);
+            }
+
+            const padding = 500;
+            minX -= padding;
+            minY -= padding;
+            maxX += padding;
+            maxY += padding;
+
+            return {
+                x: Math.max(vw / 2 - maxX * scale, Math.min(vw / 2 - minX * scale, tx)),
+                y: Math.max(vh / 2 - maxY * scale, Math.min(vh / 2 - minY * scale, ty)),
+                scale,
+            };
+        },
+        [dragPos, nodes],
     );
 
     const onCanvasMouseDown = useCallback(
@@ -134,11 +180,9 @@ export function GraphCanvas() {
             }
 
             if (panState.current.isPanning) {
-                setTransform({
-                    x: panState.current.startTx + (event.clientX - panState.current.startX),
-                    y: panState.current.startTy + (event.clientY - panState.current.startY),
-                    scale: transform.scale,
-                });
+                const rawX = panState.current.startTx + (event.clientX - panState.current.startX);
+                const rawY = panState.current.startTy + (event.clientY - panState.current.startY);
+                setTransform(clampTransform(rawX, rawY, transform.scale));
             }
 
             if (dragState.current.isPending && !dragState.current.isDragging) {
@@ -158,15 +202,24 @@ export function GraphCanvas() {
                 let nextX = dragState.current.startNodeX + deltaX;
                 let nextY = dragState.current.startNodeY + deltaY;
 
+                const gap = 8;
                 for (const otherNode of nodes) {
                     if (otherNode.id === dragState.current.nodeId) continue;
                     const otherPosition = dragPos[otherNode.id] ?? nodePosition(otherNode);
-                    const offsetX = nextX - otherPosition.x;
-                    const offsetY = nextY - otherPosition.y;
-                    const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
-                    if (distance < 100 && distance > 0.01) {
-                        nextX = otherPosition.x + (offsetX / distance) * 100;
-                        nextY = otherPosition.y + (offsetY / distance) * 100;
+                    const selfSize = nodeSizes.current.get(dragState.current.nodeId) ?? { w: 80, h: 32 };
+                    const otherSize = nodeSizes.current.get(otherNode.id) ?? { w: 80, h: 32 };
+                    const halfW = (selfSize.w + otherSize.w) / 2 + gap;
+                    const halfH = (selfSize.h + otherSize.h) / 2 + gap;
+                    const dx = nextX - otherPosition.x;
+                    const dy = nextY - otherPosition.y;
+                    const overlapX = halfW - Math.abs(dx);
+                    const overlapY = halfH - Math.abs(dy);
+                    if (overlapX > 0 && overlapY > 0) {
+                        if (overlapX < overlapY) {
+                            nextX += dx >= 0 ? overlapX : -overlapX;
+                        } else {
+                            nextY += dy >= 0 ? overlapY : -overlapY;
+                        }
                     }
                 }
 
@@ -179,10 +232,9 @@ export function GraphCanvas() {
 
         const onMouseUp = () => {
             if (dragState.current.isDragging) {
-                const { nodeId } = dragState.current;
-                const position = dragPos[nodeId];
+                const position = dragPos[dragState.current.nodeId];
                 if (position) {
-                    updateNodePosition(nodeId, position.x, position.y);
+                    void updateNodePosition(dragState.current.nodeId, position.x, position.y);
                 }
             }
             dragState.current.isDragging = false;
@@ -196,28 +248,32 @@ export function GraphCanvas() {
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
         };
-    }, [dragPos, nodes, setTransform, transform.scale, updateNodePosition]);
+    }, [clampTransform, dragPos, nodes, setTransform, transform.scale, updateNodePosition]);
 
     useEffect(() => {
         setDragPos({});
     }, [nodes]);
 
-    const onWheel = useCallback(
-        (event: React.WheelEvent) => {
-            event.preventDefault();
-            const rect = containerRef.current?.getBoundingClientRect();
-            if (!rect) return;
+    useEffect(() => {
+        const element = containerRef.current;
+        if (!element) return;
 
+        const handler = (event: WheelEvent) => {
+            if ((event.target as HTMLElement).closest(".file-preview-overlay, .file-preview-dialog")) return;
+            event.preventDefault();
+            const rect = element.getBoundingClientRect();
             const mouseX = event.clientX - rect.left;
             const mouseY = event.clientY - rect.top;
             const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
             const newScale = Math.max(0.1, Math.min(5, transform.scale * zoomFactor));
             const newX = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
             const newY = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
-            setTransform({ x: newX, y: newY, scale: newScale });
-        },
-        [setTransform, transform.scale, transform.x, transform.y],
-    );
+            setTransform(clampTransform(newX, newY, newScale));
+        };
+
+        element.addEventListener("wheel", handler, { passive: false });
+        return () => element.removeEventListener("wheel", handler);
+    }, [clampTransform, setTransform, transform.scale, transform.x, transform.y]);
 
     const onCanvasContextMenu = useCallback(
         (event: React.MouseEvent) => {
@@ -250,7 +306,7 @@ export function GraphCanvas() {
     return (
         <div
             ref={containerRef}
-            className="relative h-full w-full overflow-hidden select-none bg-background"
+            className="graph-canvas relative h-full w-full overflow-hidden select-none bg-background"
             style={{
                 backgroundImage: `radial-gradient(circle, ${dotColor} ${dotSize}px, transparent ${dotSize}px)`,
                 backgroundSize: `${gridSize}px ${gridSize}px`,
@@ -258,7 +314,6 @@ export function GraphCanvas() {
                 cursor: relationSourceId ? "crosshair" : panState.current.isPanning ? "grabbing" : "grab",
             }}
             onMouseDown={onCanvasMouseDown}
-            onWheel={onWheel}
             onContextMenu={onCanvasContextMenu}
             onClick={() => {
                 if (contextMenu.show) closeContextMenu();
@@ -275,45 +330,17 @@ export function GraphCanvas() {
             >
                 <svg className="graph-canvas__svg">
                     <defs>
-                        <marker
-                            id="arrow-light"
-                            viewBox="0 0 8 6"
-                            refX={7}
-                            refY={3}
-                            markerWidth={5}
-                            markerHeight={4}
-                            orient="auto-start-reverse"
-                        >
-                            <path
-                                d="M 0 0.5 L 7 3 L 0 5.5"
-                                fill="none"
-                                stroke="rgba(107,114,128,0.55)"
-                                strokeWidth={1.2}
-                                strokeLinejoin="round"
-                            />
+                        <marker id="arrow-light" viewBox="0 0 8 6" refX={7} refY={3} markerWidth={5} markerHeight={4} orient="auto-start-reverse">
+                            <path d="M 0 0.5 L 7 3 L 0 5.5" fill="none" stroke="rgba(107,114,128,0.55)" strokeWidth={1.2} strokeLinejoin="round" />
                         </marker>
-                        <marker
-                            id="arrow-dark"
-                            viewBox="0 0 8 6"
-                            refX={7}
-                            refY={3}
-                            markerWidth={5}
-                            markerHeight={4}
-                            orient="auto-start-reverse"
-                        >
-                            <path
-                                d="M 0 0.5 L 7 3 L 0 5.5"
-                                fill="none"
-                                stroke="rgba(156,163,175,0.55)"
-                                strokeWidth={1.2}
-                                strokeLinejoin="round"
-                            />
+                        <marker id="arrow-dark" viewBox="0 0 8 6" refX={7} refY={3} markerWidth={5} markerHeight={4} orient="auto-start-reverse">
+                            <path d="M 0 0.5 L 7 3 L 0 5.5" fill="none" stroke="rgba(156,163,175,0.55)" strokeWidth={1.2} strokeLinejoin="round" />
                         </marker>
                     </defs>
 
                     {relations.map((relation) => {
-                        const sourcePosition = getNodeWorldPosition(relation.source_id);
-                        const targetPosition = getNodeWorldPosition(relation.target_id);
+                        const sourcePosition = getNodeWorldPosition(relation.source);
+                        const targetPosition = getNodeWorldPosition(relation.target);
                         if (!sourcePosition || !targetPosition) return null;
 
                         const style = themeLoader.link(isDark, relation.view_config);
@@ -442,17 +469,49 @@ export function GraphCanvas() {
                             pos={position}
                             isEditing={editingNodeId === node.id}
                             isLinkSource={relationSourceId === node.id}
+                            zIndex={dragState.current.isDragging && dragState.current.nodeId === node.id ? 10 : 1}
                             onMouseDown={onNodeMouseDown}
                             onContextMenu={onNodeContextMenu}
-                            onDoubleClick={(nodeId) => startEditNode(nodeId)}
-                            onRename={(nodeId, content) => void updateNode(nodeId, node.node_type, content)}
+                            onClick={(event, nodeId) => {
+                                if (event.detail === 2) {
+                                    if (clickTimer.current) {
+                                        clearTimeout(clickTimer.current.timer);
+                                        clickTimer.current = null;
+                                    }
+                                    startEditNode(nodeId);
+                                } else if (event.detail === 1) {
+                                    if (clickTimer.current) clearTimeout(clickTimer.current.timer);
+                                    if (getNodeType(node.type).category === "resource") {
+                                        clickTimer.current = {
+                                            nodeId,
+                                            timer: setTimeout(() => {
+                                                clickTimer.current = null;
+                                                setPreviewNodeId((current) => (current === nodeId ? null : nodeId));
+                                            }, 250),
+                                        };
+                                    }
+                                }
+                            }}
+                            onRename={(nodeId, newLabel) => {
+                                if (getNodeType(node.type).category === "resource") {
+                                    void updateNodeViewConfig(nodeId, { label: newLabel });
+                                    cancelEditNode();
+                                } else {
+                                    void updateNode(nodeId, node.type, newLabel);
+                                }
+                            }}
                             onCancelRename={cancelEditNode}
+                            onSizeChange={handleNodeSizeChange}
                         />
                     );
                 })}
             </div>
 
             <GraphContextMenus />
+
+            {previewNodeId && (
+                <FilePreviewDialog nodeId={previewNodeId} onClose={() => setPreviewNodeId(null)} />
+            )}
         </div>
     );
 }

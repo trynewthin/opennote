@@ -1,37 +1,53 @@
 import { create } from "zustand";
+import { workspaceApi } from "@/services/workspaceApi";
 
-type Theme = "light" | "dark";
+export type Theme = "light" | "dark";
 
 interface ThemeState {
     theme: Theme;
     toggleTheme: () => void;
     setTheme: (theme: Theme) => void;
+    hydrateTheme: (theme: Theme | null | undefined) => void;
 }
 
-export const useThemeStore = create<ThemeState>((set) => {
-    // 初始化：从 localStorage 读取，默认暗色
-    const stored = localStorage.getItem("opennote-theme") as Theme | null;
-    const initial: Theme = stored ?? "dark";
+function applyTheme(theme: Theme) {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+}
 
-    // 同步到 DOM
-    document.documentElement.classList.toggle("dark", initial === "dark");
+async function persistTheme(theme: Theme) {
+    try {
+        const settings = await workspaceApi.getAppSettings();
+        await workspaceApi.updateAppSettings({ ...settings, theme });
+    } catch (error) {
+        console.error("Failed to persist theme:", error);
+    }
+}
 
-    return {
-        theme: initial,
+const initialTheme: Theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+applyTheme(initialTheme);
 
-        toggleTheme: () =>
-            set((s) => {
-                const next: Theme = s.theme === "dark" ? "light" : "dark";
-                document.documentElement.classList.toggle("dark", next === "dark");
-                localStorage.setItem("opennote-theme", next);
-                return { theme: next };
-            }),
+export const useThemeStore = create<ThemeState>((set) => ({
+    theme: initialTheme,
 
-        setTheme: (theme) =>
-            set(() => {
-                document.documentElement.classList.toggle("dark", theme === "dark");
-                localStorage.setItem("opennote-theme", theme);
-                return { theme };
-            }),
-    };
-});
+    toggleTheme: () =>
+        set((state) => {
+            const next: Theme = state.theme === "dark" ? "light" : "dark";
+            applyTheme(next);
+            void persistTheme(next);
+            return { theme: next };
+        }),
+
+    setTheme: (theme) =>
+        set(() => {
+            applyTheme(theme);
+            void persistTheme(theme);
+            return { theme };
+        }),
+
+    hydrateTheme: (theme) =>
+        set((state) => {
+            const next = theme ?? state.theme;
+            applyTheme(next);
+            return { theme: next };
+        }),
+}));

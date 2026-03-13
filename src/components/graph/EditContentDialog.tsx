@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { DEFAULT_NODE_TYPE_OPTIONS } from "@/lib/nodeDisplay";
+import { useTranslation } from "react-i18next";
+import { getNodeTypeOptions } from "@/lib/nodeDisplay";
+import { getNodeType } from "@/lib/nodeTypeRegistry";
 import { useGraphStore } from "@/stores/graphStore";
 
 import "./EditContentDialog.css";
@@ -8,13 +10,13 @@ export function EditContentDialog() {
     const { editNodeDialog, closeEditNodeDialog, updateNode, nodes } = useGraphStore();
     const node = nodes.find((item) => item.id === editNodeDialog.nodeId);
 
-    const [nodeType, setNodeType] = useState("concept");
+    const [nodeType, setNodeType] = useState("topic");
     const [content, setContent] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         if (editNodeDialog.open && node) {
-            setNodeType(node.node_type);
+            setNodeType(node.type);
             setContent(node.content);
         }
     }, [editNodeDialog.open, node]);
@@ -34,49 +36,53 @@ export function EditContentDialog() {
 
     if (!editNodeDialog.open) return null;
 
+    const { t } = useTranslation();
+    const descriptor = getNodeType(nodeType);
+    const nodeTypeOptions = getNodeTypeOptions();
+
     return (
         <div className="edit-content-overlay" onClick={handleSubmit}>
             <div className="edit-content-dialog" onClick={(event) => event.stopPropagation()}>
                 <header className="edit-content-dialog__header">
-                    <h2 className="edit-content-dialog__title">Edit Node</h2>
+                    <h2 className="edit-content-dialog__title">{t("graphNode.editNode")}</h2>
                     <div className="edit-content-dialog__actions">
                         <button
                             className="edit-content-dialog__btn edit-content-dialog__btn--cancel"
                             onClick={closeEditNodeDialog}
                             disabled={submitting}
                         >
-                            Cancel
+                            {t("common.cancel")}
                         </button>
                         <button
                             className="edit-content-dialog__btn edit-content-dialog__btn--save"
                             onClick={handleSubmit}
                             disabled={submitting}
                         >
-                            {submitting ? "Saving" : "Save"}
+                            {submitting ? t("common.saving") : t("common.save")}
                         </button>
                     </div>
                 </header>
 
                 <div className="edit-content-dialog__body gap-4">
                     <div className="grid gap-2">
-                        <label className="text-sm font-medium">Node Type</label>
+                        <label className="text-sm font-medium">{t("graphNode.nodeType")}</label>
                         <select
                             className="edit-content-dialog__input"
                             value={nodeType}
                             onChange={(event) => setNodeType(event.target.value)}
                         >
-                            {DEFAULT_NODE_TYPE_OPTIONS.map((item) => (
+                            {nodeTypeOptions.map((item) => (
                                 <option key={item.value} value={item.value}>
-                                    {item.label}
+                                    {t(item.label)}
                                 </option>
                             ))}
                         </select>
                     </div>
 
-                    {nodeType === "text" || nodeType === "note" || nodeType === "concept" ? (
+                    {descriptor.editMode === "textarea" ? (
                         <textarea
                             className="edit-content-dialog__textarea"
-                            placeholder="Enter node content"
+                            placeholder={descriptor.contentPlaceholder}
                             value={content}
                             onChange={(event) => setContent(event.target.value)}
                             autoFocus
@@ -84,7 +90,7 @@ export function EditContentDialog() {
                     ) : (
                         <input
                             className="edit-content-dialog__input"
-                            placeholder="Enter file path or URL"
+                            placeholder={descriptor.contentPlaceholder}
                             value={content}
                             onChange={(event) => setContent(event.target.value)}
                             autoFocus

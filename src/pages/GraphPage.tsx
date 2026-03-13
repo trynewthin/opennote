@@ -1,41 +1,44 @@
-import { useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useGraphStore } from "@/stores/graphStore";
-import { useProjectStore } from "@/stores/projectStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { configService } from "@/services/configService";
-import { ArrowLeft, Sun, Moon, ZoomIn, ZoomOut, Locate } from "lucide-react";
+import { ArrowLeft, Sun, Moon, ZoomIn, ZoomOut } from "lucide-react";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { EditContentDialog } from "@/components/graph/EditContentDialog";
+import { useKeybindings } from "@/hooks/useKeybindings";
 
 import "./GraphPage.css";
 
 export function GraphPage() {
-    const { id: projectId } = useParams<{ id: string }>();
+    const { t } = useTranslation();
     const navigate = useNavigate();
-    const { loadGraphData, zoomIn, zoomOut, resetView, setTransform } = useGraphStore();
-    const { projects, fetchProjects } = useProjectStore();
-    const project = projects.find((item) => item.id === projectId);
-    const projectName = project?.name ?? "Untitled Project";
+    const [searchParams] = useSearchParams();
+    const projectPath = searchParams.get("project");
+    const decodedProjectPath = useMemo(() => (projectPath ? decodeURIComponent(projectPath) : null), [projectPath]);
+    const { currentWorkspace } = useWorkspaceStore();
+    const { loadProject, projectName, projectConfig, zoomIn, zoomOut, setTransform, transform, persistProjectConfig } = useGraphStore();
     const { theme, toggleTheme } = useThemeStore();
     const isDark = theme === "dark";
+    const transformRef = useRef(transform);
+    useKeybindings();
 
-    const projectRef = useRef(project);
-    projectRef.current = project;
-
-    useEffect(() => {
-        if (projects.length === 0) fetchProjects();
-    }, [projects.length, fetchProjects]);
+    transformRef.current = transform;
 
     useEffect(() => {
-        if (projectId) {
-            loadGraphData(projectId);
+        if (!currentWorkspace) {
+            navigate("/");
+            return;
         }
-    }, [projectId, loadGraphData]);
+        if (decodedProjectPath) {
+            void loadProject(decodedProjectPath);
+        }
+    }, [currentWorkspace, decodedProjectPath, loadProject, navigate]);
 
     useEffect(() => {
-        if (!project?.config) return;
-        const cfg = configService.parse<{ viewX?: number; viewY?: number; viewScale?: number }>(project.config);
+        const cfg = configService.parse<{ viewX?: number; viewY?: number; viewScale?: number }>(projectConfig, {});
         if (cfg && (cfg.viewX != null || cfg.viewY != null || cfg.viewScale != null)) {
             setTransform({
                 x: cfg.viewX ?? 0,
@@ -43,53 +46,45 @@ export function GraphPage() {
                 scale: cfg.viewScale ?? 1,
             });
         }
-    }, [project?.id, project?.config, setTransform]);
+    }, [projectConfig, setTransform]);
 
     useEffect(() => {
         return () => {
-            const currentProject = projectRef.current;
-            if (!currentProject) return;
-            const { transform } = useGraphStore.getState();
-            configService
-                .patch("project", currentProject.id, currentProject.config, {
-                    viewX: transform.x,
-                    viewY: transform.y,
-                    viewScale: transform.scale,
-                })
-                .catch(console.error);
+            void persistProjectConfig({
+                viewX: transformRef.current.x,
+                viewY: transformRef.current.y,
+                viewScale: transformRef.current.scale,
+            });
         };
-    }, [projectId]);
+    }, [persistProjectConfig]);
 
-    if (!projectId) {
-        return <div>Project not found</div>;
+    if (!decodedProjectPath) {
+        return <div>{t("graph.projectNotFound")}</div>;
     }
 
     return (
         <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background">
             <header className="graph-header">
                 <div className="graph-toolbar graph-toolbar--left">
-                    <button className="graph-toolbar__btn" onClick={() => navigate("/")} title="Back to projects">
+                    <button className="graph-toolbar__btn" onClick={() => navigate("/projects")} title={t("graph.backToProjects")}>
                         <ArrowLeft className="graph-toolbar__icon" />
                     </button>
                     <span className="graph-toolbar__divider" />
-                    <span className="graph-toolbar__title">{projectName}</span>
+                    <span className="graph-toolbar__title">{projectName || t("graph.untitledProject")}</span>
                 </div>
 
                 <div className="graph-toolbar graph-toolbar--right">
-                    <button className="graph-toolbar__btn" onClick={zoomIn} title="Zoom in">
+                    <button className="graph-toolbar__btn" onClick={zoomIn} title={t("graph.zoomIn")}>
                         <ZoomIn className="graph-toolbar__icon" />
                     </button>
-                    <button className="graph-toolbar__btn" onClick={zoomOut} title="Zoom out">
+                    <button className="graph-toolbar__btn" onClick={zoomOut} title={t("graph.zoomOut")}>
                         <ZoomOut className="graph-toolbar__icon" />
-                    </button>
-                    <button className="graph-toolbar__btn" onClick={resetView} title="Reset view">
-                        <Locate className="graph-toolbar__icon" />
                     </button>
                     <span className="graph-toolbar__divider" />
                     <button
                         className="graph-toolbar__btn"
                         onClick={toggleTheme}
-                        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                        title={isDark ? t("graph.switchToLight") : t("graph.switchToDark")}
                     >
                         {isDark ? (
                             <Sun className="graph-toolbar__icon graph-toolbar__icon--sun" />

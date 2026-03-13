@@ -1,11 +1,7 @@
-mod graph;
-mod group;
 mod node;
-mod project;
-mod relation;
+mod settings;
+mod workspace;
 
-pub use graph::{GraphData, ProjectExport, ProjectExportMeta};
-pub use group::{Group, GroupMember};
-pub use node::{Node, NodeResourceMetadata};
-pub use project::Project;
-pub use relation::Relation;
+pub use node::NodeResourceMetadata;
+pub use settings::AppSettings;
+pub use workspace::{LoadedProject, WorkspaceProjectSummary};

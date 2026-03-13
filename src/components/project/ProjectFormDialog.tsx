@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
-import type { Project } from "@/types";
-import { useProjectStore } from "@/stores/projectStore";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { ProjectSummary } from "@/types";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -16,15 +17,16 @@ import { Input } from "@/components/ui/input";
 interface ProjectFormDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    project?: Project;
+    project?: ProjectSummary;
 }
 
 export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDialogProps) {
+    const { t } = useTranslation();
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
-    const { addProject, editProject } = useProjectStore();
+    const { createProject, updateProject } = useWorkspaceStore();
     const isEdit = !!project;
 
     useEffect(() => {
@@ -39,9 +41,9 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
         setSubmitting(true);
         try {
             if (isEdit && project) {
-                await editProject(project.id, name.trim(), description.trim());
+                await updateProject(project.path, name.trim(), description.trim());
             } else {
-                await addProject(name.trim(), description.trim());
+                await createProject(name.trim(), description.trim());
             }
             onOpenChange(false);
         } catch (error) {
@@ -55,22 +57,20 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent className="sm:max-w-md" onClick={(event) => event.stopPropagation()}>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>{isEdit ? "Edit Project" : "New Project"}</AlertDialogTitle>
+                    <AlertDialogTitle>{isEdit ? t("projectForm.editTitle") : t("projectForm.createTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        {isEdit
-                            ? "Update the project name and description."
-                            : "Create a new knowledge graph project."}
+                        {isEdit ? t("projectForm.editDesc") : t("projectForm.createDesc")}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
                 <div className="grid gap-3 py-2">
                     <div className="grid gap-1.5">
                         <label htmlFor="project-name" className="text-sm font-medium">
-                            Project Name <span className="text-destructive">*</span>
+                            {t("projectForm.nameLabel")} <span className="text-destructive">*</span>
                         </label>
                         <Input
                             id="project-name"
-                            placeholder="Enter project name"
+                            placeholder={t("projectForm.namePlaceholder")}
                             value={name}
                             onChange={(event) => setName(event.target.value)}
                             onKeyDown={(event) => {
@@ -82,11 +82,11 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
 
                     <div className="grid gap-1.5">
                         <label htmlFor="project-desc" className="text-sm font-medium">
-                            Description
+                            {t("projectForm.descLabel")}
                         </label>
                         <Input
                             id="project-desc"
-                            placeholder="Optional short description"
+                            placeholder={t("projectForm.descPlaceholder")}
                             value={description}
                             onChange={(event) => setDescription(event.target.value)}
                             onKeyDown={(event) => {
@@ -97,9 +97,9 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                 </div>
 
                 <AlertDialogFooter>
-                    <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel disabled={submitting}>{t("common.cancel")}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleSubmit} disabled={!name.trim() || submitting}>
-                        {submitting ? "Saving" : isEdit ? "Save" : "Create"}
+                        {submitting ? t("common.saving") : isEdit ? t("common.save") : t("common.create")}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

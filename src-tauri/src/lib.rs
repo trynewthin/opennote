@@ -2,8 +2,10 @@ mod application;
 mod commands;
 mod db;
 mod error;
+mod format;
 mod models;
 
+use application::CurrentWorkspace;
 use db::Database;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -24,6 +26,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .manage(database)
+        .manage(CurrentWorkspace::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -38,34 +41,17 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::project::get_all_projects,
-            commands::project::create_project,
-            commands::project::update_project,
-            commands::project::delete_project,
-            commands::project::get_project_node_count,
-            commands::project::update_project_config,
-            commands::node::get_graph_data,
-            commands::node::create_node,
-            commands::node::update_node,
-            commands::node::update_node_position,
-            commands::node::delete_node,
-            commands::node::search_nodes,
-            commands::node::batch_delete_nodes,
-            commands::node::update_node_view_config,
-            commands::node::update_node_semantic_config,
+            commands::settings::get_app_settings,
+            commands::settings::update_app_settings,
+            commands::workspace::open_workspace,
+            commands::workspace::list_projects,
+            commands::workspace::load_project,
+            commands::workspace::save_project,
+            commands::workspace::create_project,
+            commands::workspace::delete_project,
+            commands::workspace::copy_attachment,
             commands::node::get_node_resource_metadata,
-            commands::relation::create_relation,
-            commands::relation::update_relation,
-            commands::relation::delete_relation,
-            commands::relation::update_relation_view_config,
-            commands::relation::update_relation_semantic_config,
-            commands::group::create_group,
-            commands::group::update_group,
-            commands::group::delete_group,
-            commands::group::add_node_to_group,
-            commands::group::remove_node_from_group,
-            commands::import_export::export_project_on,
-            commands::import_export::import_project_on,
+            commands::node::read_node_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

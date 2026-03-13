@@ -1,13 +1,10 @@
-import type { Node, NodeResourceMetadata } from "@/types";
+import type { Node, NodeResourceMetadata, NodeViewConfig } from "@/types";
+import { getAllNodeTypes, getNodeType } from "./nodeTypeRegistry";
+import { configService } from "@/services/configService";
 
-export const DEFAULT_NODE_TYPE_OPTIONS = [
-    { value: "concept", label: "Concept" },
-    { value: "text", label: "Text" },
-    { value: "note", label: "Note" },
-    { value: "file", label: "File" },
-    { value: "image", label: "Image" },
-    { value: "url", label: "URL" },
-] as const;
+export function getNodeTypeOptions() {
+    return getAllNodeTypes().map((descriptor) => ({ value: descriptor.type, label: descriptor.label }));
+}
 
 export const DEFAULT_RELATION_TYPE_OPTIONS = [
     { value: "related", label: "Related" },
@@ -15,7 +12,10 @@ export const DEFAULT_RELATION_TYPE_OPTIONS = [
     { value: "depends_on", label: "Depends On" },
 ] as const;
 
-const RESOURCE_NODE_TYPES = new Set(["file", "image", "url"]);
+export function isResourceNodeType(nodeType: string): boolean {
+    const descriptor = getNodeType(nodeType);
+    return descriptor.category === "resource" || descriptor.category === "media";
+}
 
 function takeFirstLine(value: string): string {
     return value.trim().split(/\r?\n/, 1)[0] ?? "";
@@ -36,21 +36,20 @@ function fallbackResourceName(content: string): string | null {
     return pieces.at(-1) ?? null;
 }
 
-export function isResourceNodeType(nodeType: string): boolean {
-    return RESOURCE_NODE_TYPES.has(nodeType);
-}
-
 export function displayText(
-    node: Pick<Node, "node_type" | "content">,
+    node: Pick<Node, "type" | "content" | "view_config">,
     metadata?: NodeResourceMetadata | null,
 ): string {
+    const viewConfig = configService.parse<NodeViewConfig>(node.view_config, {});
+    if (viewConfig?.label) return truncate(viewConfig.label);
+
     const content = node.content.trim();
-    if (isResourceNodeType(node.node_type)) {
+    if (isResourceNodeType(node.type)) {
         const resourceName = metadata?.display_name ?? fallbackResourceName(content);
-        return truncate(resourceName || node.node_type);
+        return truncate(resourceName || node.type);
     }
     if (content) {
         return truncate(takeFirstLine(content));
     }
-    return node.node_type;
+    return node.type;
 }

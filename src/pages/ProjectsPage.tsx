@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useProjectStore } from "@/stores/projectStore";
+import { useTranslation } from "react-i18next";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { ProjectCard, ProjectFormDialog } from "@/components/project";
 import { Button } from "@/components/ui/button";
@@ -10,25 +11,28 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Plus, FolderOpen, Menu, Settings, Sun, Moon, Upload } from "lucide-react";
+import { ArrowLeft, FolderOpen, Menu, Settings, Sun, Moon, Plus } from "lucide-react";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
-import { ImportExportDialog } from "@/components/project/ImportExportDialog";
-import type { Project } from "@/types";
+import type { ProjectSummary } from "@/types";
 
 export function ProjectsPage() {
-    const { projects, noteCounts, loading, error, fetchProjects } = useProjectStore();
+    const { t } = useTranslation();
+    const navigate = useNavigate();
+    const { currentWorkspace, projects, loading, error, refreshProjects } = useWorkspaceStore();
     const [createOpen, setCreateOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [importOpen, setImportOpen] = useState(false);
     const { theme, toggleTheme } = useThemeStore();
-    const navigate = useNavigate();
 
     useEffect(() => {
-        fetchProjects();
-    }, [fetchProjects]);
+        if (!currentWorkspace) {
+            navigate("/");
+            return;
+        }
+        void refreshProjects();
+    }, [currentWorkspace, navigate, refreshProjects]);
 
-    const handleOpenProject = (project: Project) => {
-        navigate(`/project/${project.id}`);
+    const handleOpenProject = (project: ProjectSummary) => {
+        navigate(`/graph?project=${encodeURIComponent(project.path)}`);
     };
 
     return (
@@ -42,16 +46,23 @@ export function ProjectsPage() {
 
             <main className="relative z-10 flex-1 overflow-y-auto">
                 <div className="mx-auto max-w-6xl px-6 py-6">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h1 className="text-lg font-semibold">Projects</h1>
+                    <div className="mb-6 flex items-start justify-between gap-4">
+                        <div>
+                            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+                                <FolderOpen className="size-4" />
+                                <span>{currentWorkspace}</span>
+                            </div>
+                            <h1 className="text-lg font-semibold">{t("projects.title")}</h1>
+                        </div>
+
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" onClick={() => setImportOpen(true)}>
-                                <Upload className="size-4" data-icon="inline-start" />
-                                Import
+                            <Button variant="outline" onClick={() => navigate("/")}>
+                                <ArrowLeft className="size-4" data-icon="inline-start" />
+                                {t("workspace.switch")}
                             </Button>
                             <Button onClick={() => setCreateOpen(true)}>
                                 <Plus className="size-4" data-icon="inline-start" />
-                                New Project
+                                {t("projects.newProject")}
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger render={<Button variant="outline" size="icon" />}>
@@ -60,11 +71,11 @@ export function ProjectsPage() {
                                 <DropdownMenuContent align="end" sideOffset={4}>
                                     <DropdownMenuItem onClick={toggleTheme}>
                                         {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-                                        {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                                        {theme === "dark" ? t("projects.lightMode") : t("projects.darkMode")}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                                         <Settings className="size-4" />
-                                        Settings
+                                        {t("common.settings")}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -73,7 +84,7 @@ export function ProjectsPage() {
 
                     {error && (
                         <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                            Failed to load projects: {error}
+                            {t("projects.loadError", { error })}
                         </div>
                     )}
 
@@ -93,13 +104,13 @@ export function ProjectsPage() {
                             <div className="empty-state-icon mb-6 flex size-16 items-center justify-center rounded-2xl bg-muted">
                                 <FolderOpen className="size-8 text-muted-foreground" />
                             </div>
-                            <h2 className="mb-2 text-lg font-medium">No projects yet</h2>
+                            <h2 className="mb-2 text-lg font-medium">{t("projects.noProjects")}</h2>
                             <p className="mb-6 max-w-xs text-center text-sm text-muted-foreground">
-                                Create your first knowledge graph project and start organizing your notes.
+                                {t("projects.noProjectsDesc")}
                             </p>
                             <Button onClick={() => setCreateOpen(true)} size="lg">
                                 <Plus className="size-4" data-icon="inline-start" />
-                                Create First Project
+                                {t("projects.createFirst")}
                             </Button>
                         </div>
                     )}
@@ -108,15 +119,14 @@ export function ProjectsPage() {
                         <>
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-sm font-medium text-muted-foreground">
-                                    {projects.length} projects
+                                    {t("projects.projectCount", { count: projects.length })}
                                 </h2>
                             </div>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                 {projects.map((project) => (
                                     <ProjectCard
-                                        key={project.id}
+                                        key={project.path}
                                         project={project}
-                                        noteCount={noteCounts[project.id] ?? 0}
                                         onOpen={handleOpenProject}
                                     />
                                 ))}
@@ -128,13 +138,6 @@ export function ProjectsPage() {
 
             <ProjectFormDialog open={createOpen} onOpenChange={setCreateOpen} />
             {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
-            {importOpen && (
-                <ImportExportDialog
-                    mode="import"
-                    onImported={() => fetchProjects()}
-                    onClose={() => setImportOpen(false)}
-                />
-            )}
         </div>
     );
 }

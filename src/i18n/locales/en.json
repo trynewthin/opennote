@@ -1,0 +1,129 @@
+{
+    "app": {
+        "name": "OpenNote"
+    },
+    "common": {
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving",
+        "create": "Create",
+        "delete": "Delete",
+        "edit": "Edit",
+        "export": "Export",
+        "import": "Import",
+        "settings": "Settings",
+        "close": "Close",
+        "confirm": "Confirm",
+        "processing": "Processing...",
+        "error": "Error"
+    },
+    "projects": {
+        "title": "Projects",
+        "newProject": "New Project",
+        "noProjects": "No projects yet",
+        "noProjectsDesc": "Create your first knowledge graph project and start organizing your notes.",
+        "createFirst": "Create First Project",
+        "projectCount": "{{count}} projects",
+        "noteCount": "{{count}} notes",
+        "loadError": "Failed to load projects: {{error}}",
+        "lightMode": "Light Mode",
+        "darkMode": "Dark Mode"
+    },
+    "workspace": {
+        "eyebrow": "Workspace",
+        "title": "Choose a workspace folder",
+        "description": "Projects are stored as plain-text .on files inside a workspace directory. Open a folder to scan and manage them.",
+        "choose": "Open Workspace",
+        "recent": "Recent workspaces",
+        "noRecent": "No recent workspace yet.",
+        "switch": "Switch Workspace"
+    },
+    "projectForm": {
+        "editTitle": "Edit Project",
+        "createTitle": "New Project",
+        "editDesc": "Update the project name and description.",
+        "createDesc": "Create a new knowledge graph project.",
+        "nameLabel": "Project Name",
+        "namePlaceholder": "Enter project name",
+        "descLabel": "Description",
+        "descPlaceholder": "Optional short description"
+    },
+    "deleteProject": {
+        "title": "Delete Project",
+        "confirmMsg": "Are you sure you want to delete \"{{name}}\"?",
+        "noteWarning": "This project contains {{count}} notes. This action cannot be undone.",
+        "deleting": "Deleting...",
+        "confirmDelete": "Delete"
+    },
+    "importExport": {
+        "exportTitle": "Export Project",
+        "importTitle": "Import Project",
+        "projectLabel": "Project",
+        "exportDesc": "Export as .on file containing all nodes, content, relations, and configuration.",
+        "importDesc": "Select a .on file to import as a new project.",
+        "exportAction": "Choose location and export",
+        "importAction": "Choose file and import"
+    },
+    "graph": {
+        "backToProjects": "Back to projects",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "resetView": "Reset view",
+        "switchToLight": "Switch to light mode",
+        "switchToDark": "Switch to dark mode",
+        "projectNotFound": "Project not found",
+        "untitledProject": "Untitled Project"
+    },
+    "graphNode": {
+        "editNode": "Edit Node",
+        "nodeType": "Node Type",
+        "enterContent": "Enter node content",
+        "enterPath": "Enter file path or URL"
+    },
+    "contextMenu": {
+        "addNode": "Add node",
+        "addFile": "Add file",
+        "quickEdit": "Quick edit",
+        "editNode": "Edit node",
+        "startLink": "Start link",
+        "deleteNode": "Delete node",
+        "noDirection": "No direction",
+        "forward": "Forward",
+        "backward": "Backward",
+        "deleteRelation": "Delete relation"
+    },
+    "nodeTypes": {
+        "topic": "Topic",
+        "document": "Document",
+        "file": "File",
+        "url": "URL"
+    },
+    "settings": {
+        "title": "Settings",
+        "general": "General",
+        "appearance": "Appearance",
+        "about": "About",
+        "expand": "Expand",
+        "collapse": "Collapse",
+        "language": "Language",
+        "languageDesc": "Choose display language for the interface.",
+        "generalPlaceholder": "General settings are under construction.",
+        "appearancePlaceholder": "Appearance settings are under construction.",
+        "appDesc": "Knowledge graph note-taking desktop app",
+        "checkForUpdates": "Check for Updates",
+        "checking": "Checking...",
+        "updateAvailable": "Version v{{version}} is available.\n\nRelease notes:\n{{notes}}\n\nDownload and restart now?",
+        "updateTitle": "Update Available",
+        "updateBtn": "Update",
+        "latestVersion": "You are already on the latest version.",
+        "checkTitle": "Check for Updates",
+        "updateError": "Failed to check for updates: {{error}}",
+        "releaseTimeline": "Release Timeline"
+    },
+    "time": {
+        "justNow": "Just now",
+        "minutesAgo": "{{count}}m ago",
+        "hoursAgo": "{{count}}h ago",
+        "daysAgo": "{{count}}d ago"
+    }
+}

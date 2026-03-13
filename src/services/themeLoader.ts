@@ -1,12 +1,11 @@
 import type { CSSProperties } from "react";
+import type { JsonObject } from "@/types";
 import {
     defaultNodeTheme,
     defaultContentTheme,
     defaultLinkTheme,
     defaultContentLinkTheme,
 } from "@/config/defaultTheme";
-
-// ─── 主题类型定义 ───
 
 export interface NodeTheme {
     color?: string;
@@ -59,15 +58,8 @@ export interface ProjectTheme {
     [key: string]: unknown;
 }
 
-// ─── 内部工具 ───
-
-function parseConfig<T>(raw: string | null): Partial<T> {
-    if (!raw) return {};
-    try {
-        return JSON.parse(raw) as Partial<T>;
-    } catch {
-        return {};
-    }
+function parseConfig<T>(raw: JsonObject | null | undefined): Partial<T> {
+    return (raw ?? {}) as Partial<T>;
 }
 
 function merge<T extends Record<string, unknown>>(...layers: Partial<T>[]): T {
@@ -82,13 +74,16 @@ function merge<T extends Record<string, unknown>>(...layers: Partial<T>[]): T {
     return result as T;
 }
 
-// ─── 主题装载器 ───
-
 export const themeLoader = {
-    node(isDark: boolean, entityConfig?: string | null, projectConfig?: string | null): { theme: NodeTheme; css: CSSProperties; textCss: CSSProperties } {
-        const projectTheme = parseConfig<ProjectTheme>(projectConfig ?? null);
-        const entityTheme = parseConfig<NodeTheme>(entityConfig ?? null);
-        const theme = merge<NodeTheme>(defaultNodeTheme, projectTheme.node ?? {}, entityTheme);
+    node(
+        isDark: boolean,
+        entityConfig?: JsonObject | null,
+        projectConfig?: JsonObject | null,
+        typeOverrides?: Partial<NodeTheme>,
+    ): { theme: NodeTheme; css: CSSProperties; textCss: CSSProperties } {
+        const projectTheme = parseConfig<ProjectTheme>(projectConfig);
+        const entityTheme = parseConfig<NodeTheme>(entityConfig);
+        const theme = merge<NodeTheme>(defaultNodeTheme, projectTheme.node ?? {}, typeOverrides ?? {}, entityTheme);
 
         return {
             theme,
@@ -105,9 +100,9 @@ export const themeLoader = {
         };
     },
 
-    content(isDark: boolean, entityConfig?: string | null, projectConfig?: string | null): { theme: ContentTheme; css: CSSProperties; textCss: CSSProperties } {
-        const projectTheme = parseConfig<ProjectTheme>(projectConfig ?? null);
-        const entityTheme = parseConfig<ContentTheme>(entityConfig ?? null);
+    content(isDark: boolean, entityConfig?: JsonObject | null, projectConfig?: JsonObject | null): { theme: ContentTheme; css: CSSProperties; textCss: CSSProperties } {
+        const projectTheme = parseConfig<ProjectTheme>(projectConfig);
+        const entityTheme = parseConfig<ContentTheme>(entityConfig);
         const theme = merge<ContentTheme>(defaultContentTheme, projectTheme.content ?? {}, entityTheme);
 
         return {
@@ -125,9 +120,9 @@ export const themeLoader = {
         };
     },
 
-    link(isDark: boolean, entityConfig?: string | null, projectConfig?: string | null): { theme: LinkTheme; stroke: string; strokeWidth: number; strokeDasharray: string } {
-        const projectTheme = parseConfig<ProjectTheme>(projectConfig ?? null);
-        const entityTheme = parseConfig<LinkTheme>(entityConfig ?? null);
+    link(isDark: boolean, entityConfig?: JsonObject | null, projectConfig?: JsonObject | null): { theme: LinkTheme; stroke: string; strokeWidth: number; strokeDasharray: string } {
+        const projectTheme = parseConfig<ProjectTheme>(projectConfig);
+        const entityTheme = parseConfig<LinkTheme>(entityConfig);
         const theme = merge<LinkTheme>(defaultLinkTheme, projectTheme.link ?? {}, entityTheme);
 
         return {
@@ -138,9 +133,9 @@ export const themeLoader = {
         };
     },
 
-    contentLink(isDark: boolean, entityConfig?: string | null, projectConfig?: string | null): { stroke: string; strokeWidth: number; curvature: number } {
-        const projectTheme = parseConfig<ProjectTheme>(projectConfig ?? null);
-        const entityTheme = parseConfig<ContentLinkTheme>(entityConfig ?? null);
+    contentLink(isDark: boolean, entityConfig?: JsonObject | null, projectConfig?: JsonObject | null): { stroke: string; strokeWidth: number; curvature: number } {
+        const projectTheme = parseConfig<ProjectTheme>(projectConfig);
+        const entityTheme = parseConfig<ContentLinkTheme>(entityConfig);
         const theme = merge<ContentLinkTheme>(defaultContentLinkTheme, projectTheme.contentLink ?? {}, entityTheme);
 
         return {
@@ -150,7 +145,7 @@ export const themeLoader = {
         };
     },
 
-    project(projectConfig: string | null): ProjectTheme {
+    project(projectConfig: JsonObject | null | undefined): ProjectTheme {
         return parseConfig<ProjectTheme>(projectConfig);
     },
 };

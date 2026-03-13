@@ -1,88 +1,73 @@
-use crate::application::{GraphService, NodeService};
+use crate::application::{CurrentWorkspace, NodeService};
 use crate::commands::{into_command_result, CommandResult};
 use crate::db::Database;
-use crate::models::{GraphData, Node, NodeResourceMetadata};
+use crate::models::NodeResourceMetadata;
 use tauri::State;
-
-#[tauri::command]
-pub fn get_graph_data(db: State<Database>, project_id: String) -> CommandResult<GraphData> {
-    into_command_result(GraphService::new(db.inner()).get_project_graph(&project_id))
-}
-
-#[tauri::command]
-pub fn create_node(
-    db: State<Database>,
-    project_id: String,
-    node_type: String,
-    content: String,
-    x: f64,
-    y: f64,
-) -> CommandResult<Node> {
-    into_command_result(NodeService::new(db.inner()).create(
-        &project_id,
-        &node_type,
-        &content,
-        x,
-        y,
-    ))
-}
-
-#[tauri::command]
-pub fn update_node(
-    db: State<Database>,
-    id: String,
-    node_type: String,
-    content: String,
-) -> CommandResult<Node> {
-    into_command_result(NodeService::new(db.inner()).update(&id, &node_type, &content))
-}
-
-#[tauri::command]
-pub fn update_node_position(db: State<Database>, id: String, x: f64, y: f64) -> CommandResult<()> {
-    into_command_result(NodeService::new(db.inner()).update_position(&id, x, y))
-}
-
-#[tauri::command]
-pub fn delete_node(db: State<Database>, id: String) -> CommandResult<()> {
-    into_command_result(NodeService::new(db.inner()).delete(&id))
-}
-
-#[tauri::command]
-pub fn search_nodes(
-    db: State<Database>,
-    project_id: String,
-    query: String,
-) -> CommandResult<Vec<Node>> {
-    into_command_result(NodeService::new(db.inner()).search(&project_id, &query))
-}
-
-#[tauri::command]
-pub fn batch_delete_nodes(db: State<Database>, ids: Vec<String>) -> CommandResult<()> {
-    into_command_result(NodeService::new(db.inner()).batch_delete(&ids))
-}
-
-#[tauri::command]
-pub fn update_node_view_config(
-    db: State<Database>,
-    id: String,
-    config: Option<String>,
-) -> CommandResult<()> {
-    into_command_result(NodeService::new(db.inner()).update_view_config(&id, config.as_deref()))
-}
-
-#[tauri::command]
-pub fn update_node_semantic_config(
-    db: State<Database>,
-    id: String,
-    config: Option<String>,
-) -> CommandResult<()> {
-    into_command_result(NodeService::new(db.inner()).update_semantic_config(&id, config.as_deref()))
-}
 
 #[tauri::command]
 pub fn get_node_resource_metadata(
     db: State<Database>,
+    current_workspace: State<CurrentWorkspace>,
+    project_path: String,
     node_id: String,
 ) -> CommandResult<NodeResourceMetadata> {
-    into_command_result(NodeService::new(db.inner()).get_resource_metadata(&node_id))
+    into_command_result(
+        NodeService::new(db.inner(), current_workspace.inner())
+            .get_resource_metadata(&project_path, &node_id),
+    )
+}
+
+#[derive(serde::Serialize)]
+pub struct FileContent {
+    pub encoding: String,
+    pub data: String,
+    pub mime_type: Option<String>,
+    pub file_name: Option<String>,
+}
+
+#[tauri::command]
+pub fn read_node_file(
+    db: State<Database>,
+    current_workspace: State<CurrentWorkspace>,
+    project_path: String,
+    node_id: String,
+) -> CommandResult<FileContent> {
+    use crate::error::AppError;
+
+    into_command_result((|| -> crate::application::AppResult<FileContent> {
+        let meta = NodeService::new(db.inner(), current_workspace.inner())
+            .get_resource_metadata(&project_path, &node_id)?;
+        let path = meta
+            .resolved_path
+            .as_deref()
+            .ok_or_else(|| AppError::NotFound("No resolved path for node".into()))?;
+
+        let mime = meta.mime_type.clone().unwrap_or_default();
+        let is_text = mime.starts_with("text/")
+            || mime == "application/json"
+            || mime == "application/javascript"
+            || mime == "application/xml"
+            || mime == "application/x-yaml"
+            || mime == "application/toml";
+
+        if is_text {
+            let text = std::fs::read_to_string(path)?;
+            Ok(FileContent {
+                encoding: "text".into(),
+                data: text,
+                mime_type: meta.mime_type,
+                file_name: meta.display_name,
+            })
+        } else {
+            use base64::Engine;
+            let bytes = std::fs::read(path)?;
+            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+            Ok(FileContent {
+                encoding: "base64".into(),
+                data: b64,
+                mime_type: meta.mime_type,
+                file_name: meta.display_name,
+            })
+        }
+    })())
 }

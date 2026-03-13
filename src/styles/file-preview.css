@@ -1,0 +1,183 @@
+/* ─── File Preview Dialog ─── */
+
+.file-preview-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: fpOverlayIn 0.18s ease-out;
+}
+
+.dark .file-preview-overlay {
+    background: rgba(0, 0, 0, 0.55);
+}
+
+@keyframes fpOverlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.file-preview-dialog {
+    width: 90vw;
+    max-width: 1200px;
+    height: 85vh;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: none;
+    border-radius: 14px 14px 0 0;
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fpDialogIn 0.22s ease-out;
+}
+
+.dark .file-preview-dialog {
+    background: rgba(28, 28, 30, 0.92);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+@keyframes fpDialogIn {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Header ─── */
+
+.file-preview-dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    flex-shrink: 0;
+}
+
+.dark .file-preview-dialog__header {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.file-preview-dialog__title {
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 40px);
+}
+
+.file-preview-dialog__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.5;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.file-preview-dialog__close:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.dark .file-preview-dialog__close:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Body ─── */
+
+.file-preview-dialog__body {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+    min-height: 200px;
+}
+
+/* ─── Media elements ─── */
+
+.file-preview-dialog__image {
+    max-width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto;
+}
+
+.file-preview-dialog__video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+}
+
+.file-preview-dialog__audio {
+    width: 100%;
+    margin-top: 16px;
+}
+
+/* ─── Code / text preview ─── */
+
+.file-preview-dialog__code {
+    margin: 0;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    max-height: none;
+    height: 100%;
+}
+
+.dark .file-preview-dialog__code {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Status elements ─── */
+
+.file-preview-dialog__loading,
+.file-preview-dialog__error,
+.file-preview-dialog__unknown {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    color: inherit;
+    opacity: 0.5;
+    font-size: 13px;
+    gap: 8px;
+}
+
+.file-preview-dialog__error {
+    color: #ef4444;
+    opacity: 1;
+}
+
+.file-preview-dialog__mime {
+    font-size: 11px;
+    opacity: 0.5;
+}

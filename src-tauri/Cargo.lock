@@ -2436,9 +2436,11 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 name = "opennote"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "log",
  "mime_guess",
+ "pathdiff",
  "rusqlite",
  "serde",
  "serde_json",
@@ -2526,6 +2528,12 @@ dependencies = [
  "smallvec",
  "windows-link 0.2.1",
 ]
+
+[[package]]
+name = "pathdiff"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 
 [[package]]
 name = "pbkdf2"
