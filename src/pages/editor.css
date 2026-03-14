@@ -31,54 +31,58 @@
     right: 0;
     z-index: 20;
     display: flex;
-    align-items: stretch;
-    height: 36px;
-    padding: 0 4px;
-    gap: 1px;
-    background: rgba(245, 245, 245, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    align-items: center;
+    min-height: 44px;
+    padding: 6px 8px 0;
+    gap: 8px;
     overflow-x: auto;
     overflow-y: hidden;
-}
-
-:is(.dark) .editor-tabs {
-    background: rgba(18, 18, 18, 0.85);
-    border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
 .editor-tabs__tab {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 0 12px;
-    border: none;
-    background: transparent;
+    min-height: 34px;
+    padding: 0 12px 0 14px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset;
     cursor: pointer;
     white-space: nowrap;
     color: inherit;
-    opacity: 0.5;
     font-size: 12px;
-    transition: opacity 0.12s, background 0.12s;
+    transition: border-color 0.12s, background 0.12s, box-shadow 0.12s, transform 0.12s;
 }
 
 .editor-tabs__tab:hover {
-    opacity: 0.8;
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
 }
 
 .editor-tabs__tab--active {
-    opacity: 1;
-    background: rgba(0, 0, 0, 0.06);
+    background: rgb(255, 255, 255);
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+:is(.dark) .editor-tabs__tab {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(24, 24, 24, 0.86);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
 :is(.dark) .editor-tabs__tab:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(32, 32, 32, 0.98);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 :is(.dark) .editor-tabs__tab--active {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgb(36, 36, 36);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
 }
 
 .editor-tabs__tab-label {

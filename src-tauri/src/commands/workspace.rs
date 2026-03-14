@@ -1,4 +1,4 @@
-use crate::application::{CurrentWorkspace, WorkspaceService};
+use crate::application::{CreateProjectRequestCache, CurrentWorkspace, WorkspaceService};
 use crate::commands::{into_command_result, CommandResult};
 use crate::db::Database;
 use crate::format::ProjectData;
@@ -9,10 +9,12 @@ use tauri::State;
 pub fn open_workspace(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     path: String,
 ) -> CommandResult<Vec<WorkspaceProjectSummary>> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner()).open_workspace(&path),
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
+            .open_workspace(&path),
     )
 }
 
@@ -20,9 +22,11 @@ pub fn open_workspace(
 pub fn list_projects(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
 ) -> CommandResult<Vec<WorkspaceProjectSummary>> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner()).list_projects(),
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
+            .list_projects(),
     )
 }
 
@@ -30,10 +34,12 @@ pub fn list_projects(
 pub fn load_project(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
 ) -> CommandResult<LoadedProject> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner()).load_project(&project_path),
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
+            .load_project(&project_path),
     )
 }
 
@@ -41,11 +47,12 @@ pub fn load_project(
 pub fn save_project(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
     data: ProjectData,
 ) -> CommandResult<WorkspaceProjectSummary> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner())
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
             .save_project(&project_path, &data),
     )
 }
@@ -54,12 +61,15 @@ pub fn save_project(
 pub fn create_project(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     name: String,
     description: String,
+    folder_path: Option<String>,
+    request_id: Option<String>,
 ) -> CommandResult<WorkspaceProjectSummary> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner())
-            .create_project(&name, &description),
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
+            .create_project(&name, &description, folder_path.as_deref(), request_id.as_deref()),
     )
 }
 
@@ -67,10 +77,12 @@ pub fn create_project(
 pub fn delete_project(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
 ) -> CommandResult<()> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner()).delete_project(&project_path),
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
+            .delete_project(&project_path),
     )
 }
 
@@ -78,11 +90,12 @@ pub fn delete_project(
 pub fn copy_attachment(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
     source_path: String,
 ) -> CommandResult<String> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner())
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
             .copy_attachment(&project_path, &source_path),
     )
 }
@@ -91,10 +104,12 @@ pub fn copy_attachment(
 pub fn create_workspace_folder(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     folder_path: String,
 ) -> CommandResult<()> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner()).create_folder(&folder_path),
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
+            .create_folder(&folder_path),
     )
 }
 
@@ -102,6 +117,10 @@ pub fn create_workspace_folder(
 pub fn list_workspace_folders(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
 ) -> CommandResult<Vec<String>> {
-    into_command_result(WorkspaceService::new(db.inner(), current_workspace.inner()).list_folders())
+    into_command_result(
+        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
+            .list_folders(),
+    )
 }

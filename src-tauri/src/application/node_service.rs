@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::application::{AppResult, CurrentWorkspace, WorkspaceService};
+use crate::application::{AppResult, CreateProjectRequestCache, CurrentWorkspace, WorkspaceService};
 use crate::db::Database;
 use crate::error::AppError;
 use crate::models::NodeResourceMetadata;
@@ -10,9 +10,13 @@ pub struct NodeService<'a> {
 }
 
 impl<'a> NodeService<'a> {
-    pub fn new(db: &'a Database, current_workspace: &'a CurrentWorkspace) -> Self {
+    pub fn new(
+        db: &'a Database,
+        current_workspace: &'a CurrentWorkspace,
+        create_request_cache: &'a CreateProjectRequestCache,
+    ) -> Self {
         Self {
-            workspace_service: WorkspaceService::new(db, current_workspace),
+            workspace_service: WorkspaceService::new(db, current_workspace, create_request_cache),
         }
     }
 

@@ -28,14 +28,23 @@ export function EditorPage() {
 
     // If current project was deleted/removed, navigate away
     useEffect(() => {
+        const existing = new Set(projects.map((project) => project.path));
+        setOpenTabs((prev) => prev.filter((path) => existing.has(path)));
+    }, [projects]);
+
+    useEffect(() => {
         if (!currentWorkspace || loading) return;
         if (!currentProjectPath) return;
         const exists = projects.some((project) => project.path === currentProjectPath);
         if (!exists) {
-            // Project no longer exists, clear selection
-            navigate("/editor", { replace: true });
+            const fallback = openTabs.find((path) => path !== currentProjectPath && projects.some((project) => project.path === path));
+            if (fallback) {
+                navigate(`/editor?project=${encodeURIComponent(fallback)}`, { replace: true });
+            } else {
+                navigate("/editor", { replace: true });
+            }
         }
-    }, [currentProjectPath, currentWorkspace, loading, navigate, projects]);
+    }, [currentProjectPath, currentWorkspace, loading, navigate, openTabs, projects]);
 
     // Keep openTabs in sync: add current project if not present
     useEffect(() => {

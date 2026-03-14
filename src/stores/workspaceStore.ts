@@ -14,9 +14,15 @@ interface WorkspaceState {
     openWorkspace: (path: string) => Promise<ProjectSummary[]>;
     chooseWorkspace: () => Promise<string | null>;
     refreshProjects: () => Promise<void>;
-    createProject: (name: string, description: string) => Promise<ProjectSummary>;
+    createProject: (
+        name: string,
+        description: string,
+        folderPath?: string | null,
+        requestId?: string | null,
+    ) => Promise<ProjectSummary>;
     updateProject: (projectPath: string, name: string, description: string) => Promise<ProjectSummary>;
     deleteProject: (projectPath: string) => Promise<void>;
+    removeRecentWorkspace: (path: string) => Promise<void>;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
@@ -84,8 +90,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         set({ projects, folders });
     },
 
-    createProject: async (name, description) => {
-        const project = await workspaceApi.createProject(name, description);
+    createProject: async (name, description, folderPath, requestId) => {
+        const project = await workspaceApi.createProject(name, description, folderPath, requestId);
         set((state) => ({
             projects: [project, ...state.projects].sort((left, right) => right.updated_at - left.updated_at),
         }));
@@ -112,5 +118,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         set((state) => ({
             projects: state.projects.filter((project) => project.path !== projectPath),
         }));
+    },
+
+    removeRecentWorkspace: async (path) => {
+        const currentSettings = get().settings ?? await workspaceApi.getAppSettings();
+        const nextSettings = {
+            ...currentSettings,
+            recent_workspaces: currentSettings.recent_workspaces.filter((item) => item !== path),
+        };
+        const saved = await workspaceApi.updateAppSettings(nextSettings);
+        set({
+            settings: saved,
+            recentWorkspaces: saved.recent_workspaces,
+        });
     },
 }));

@@ -50,6 +50,7 @@ interface SelectionState {
 
 interface GraphState {
     projectPath: string | null;
+    skipNextPersistForPath: string | null;
     projectName: string;
     projectDescription: string;
     projectConfig: JsonObject;
@@ -63,6 +64,7 @@ interface GraphState {
     editingNodeId: string | null;
     editNodeDialog: { open: boolean; nodeId: string | null };
     loadProject: (projectPath: string) => Promise<void>;
+    clearLoadedProject: () => void;
     createNode: (content: string, nodeType?: string) => Promise<void>;
     createFileNodes: (sourcePaths: string[]) => Promise<void>;
     deleteNode: (nodeId: string) => Promise<void>;
@@ -77,6 +79,7 @@ interface GraphState {
     ) => Promise<void>;
     deleteRelation: (relationId: string) => Promise<void>;
     persistProjectConfig: (patch: Partial<JsonObject>) => Promise<void>;
+    suppressNextPersistForProject: (projectPath: string | null) => void;
     openEditNodeDialog: (nodeId: string) => void;
     closeEditNodeDialog: () => void;
     setTransform: (transform: Transform) => void;
@@ -114,6 +117,7 @@ async function persistSnapshot(state: GraphState) {
 
 export const useGraphStore = create<GraphState>((set, get) => ({
     projectPath: null,
+    skipNextPersistForPath: null,
     projectName: "",
     projectDescription: "",
     projectConfig: {},
@@ -143,7 +147,8 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     loadProject: async (projectPath) => {
         const loaded = await workspaceApi.loadProject(projectPath);
         set({
-            projectPath: loaded.path,
+            projectPath,
+            skipNextPersistForPath: null,
             projectName: loaded.data.name,
             projectDescription: loaded.data.description,
             projectConfig: loaded.data.config,
@@ -157,6 +162,22 @@ export const useGraphStore = create<GraphState>((set, get) => ({
             editNodeDialog: { open: false, nodeId: null },
         });
     },
+    clearLoadedProject: () => set({
+        projectPath: null,
+        skipNextPersistForPath: null,
+        projectName: "",
+        projectDescription: "",
+        projectConfig: {},
+        nodes: [],
+        relations: [],
+        groups: [],
+        groupMembers: [],
+        transform: { x: 0, y: 0, scale: 1 },
+        selection: { type: null, id: null },
+        contextMenu: { show: false, x: 0, y: 0, worldX: 0, worldY: 0, type: "canvas" },
+        editingNodeId: null,
+        editNodeDialog: { open: false, nodeId: null },
+    }),
 
     createNode: async (content, nodeType = "topic") => {
         const { contextMenu } = get();
@@ -298,11 +319,18 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     },
 
     persistProjectConfig: async (patch) => {
+        const state = get();
+        if (state.projectPath && state.skipNextPersistForPath === state.projectPath) {
+            set({ skipNextPersistForPath: null });
+            return;
+        }
+
         set((state) => ({
             projectConfig: configService.merge<JsonObject>(state.projectConfig, patch),
         }));
         await persistSnapshot(get());
     },
+    suppressNextPersistForProject: (projectPath) => set({ skipNextPersistForPath: projectPath }),
 
     openEditNodeDialog: (nodeId) => set({ editNodeDialog: { open: true, nodeId } }),
     closeEditNodeDialog: () => set({ editNodeDialog: { open: false, nodeId: null } }),

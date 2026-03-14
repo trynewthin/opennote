@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProjectSummary } from "@/types";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
@@ -19,13 +19,16 @@ interface ProjectFormDialogProps {
     onOpenChange: (open: boolean) => void;
     project?: ProjectSummary;
     onSaved?: (project: ProjectSummary) => void;
+    folderPath?: string | null;
 }
 
-export function ProjectFormDialog({ open, onOpenChange, project, onSaved }: ProjectFormDialogProps) {
+export function ProjectFormDialog({ open, onOpenChange, project, onSaved, folderPath }: ProjectFormDialogProps) {
     const { t } = useTranslation();
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const submittingRef = useRef(false);
+    const createRequestIdRef = useRef<string | null>(null);
 
     const { createProject, updateProject } = useWorkspaceStore();
     const isEdit = !!project;
@@ -34,26 +37,42 @@ export function ProjectFormDialog({ open, onOpenChange, project, onSaved }: Proj
         if (open) {
             setName(project?.name ?? "");
             setDescription(project?.description ?? "");
+            setSubmitting(false);
+            submittingRef.current = false;
+            createRequestIdRef.current = project ? null : crypto.randomUUID();
         }
     }, [open, project]);
 
     const handleSubmit = async () => {
-        if (!name.trim()) return;
+        if (!name.trim() || submittingRef.current) return;
+        submittingRef.current = true;
         setSubmitting(true);
         try {
             if (isEdit && project) {
                 const saved = await updateProject(project.path, name.trim(), description.trim());
                 onSaved?.(saved);
             } else {
-                const saved = await createProject(name.trim(), description.trim());
+                const saved = await createProject(
+                    name.trim(),
+                    description.trim(),
+                    folderPath,
+                    createRequestIdRef.current,
+                );
                 onSaved?.(saved);
             }
             onOpenChange(false);
         } catch (error) {
             console.error("Failed to save project:", error);
         } finally {
+            submittingRef.current = false;
             setSubmitting(false);
         }
+    };
+
+    const handleEnterSubmit = (event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key !== "Enter" || event.repeat || event.nativeEvent.isComposing) return;
+        event.preventDefault();
+        void handleSubmit();
     };
 
     return (
@@ -62,7 +81,11 @@ export function ProjectFormDialog({ open, onOpenChange, project, onSaved }: Proj
                 <AlertDialogHeader>
                     <AlertDialogTitle>{isEdit ? t("projectForm.editTitle") : t("projectForm.createTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        {isEdit ? t("projectForm.editDesc") : t("projectForm.createDesc")}
+                        {isEdit
+                            ? t("projectForm.editDesc")
+                            : folderPath
+                                ? t("projectForm.createInFolderDesc", { folder: folderPath })
+                                : t("projectForm.createDesc")}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
@@ -76,9 +99,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, onSaved }: Proj
                             placeholder={t("projectForm.namePlaceholder")}
                             value={name}
                             onChange={(event) => setName(event.target.value)}
-                            onKeyDown={(event) => {
-                                if (event.key === "Enter") handleSubmit();
-                            }}
+                            onKeyDown={handleEnterSubmit}
                             autoFocus
                         />
                     </div>
@@ -92,9 +113,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, onSaved }: Proj
                             placeholder={t("projectForm.descPlaceholder")}
                             value={description}
                             onChange={(event) => setDescription(event.target.value)}
-                            onKeyDown={(event) => {
-                                if (event.key === "Enter") handleSubmit();
-                            }}
+                            onKeyDown={handleEnterSubmit}
                         />
                     </div>
                 </div>

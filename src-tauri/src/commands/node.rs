@@ -1,4 +1,4 @@
-use crate::application::{CurrentWorkspace, NodeService};
+use crate::application::{CreateProjectRequestCache, CurrentWorkspace, NodeService};
 use crate::commands::{into_command_result, CommandResult};
 use crate::db::Database;
 use crate::models::NodeResourceMetadata;
@@ -8,11 +8,12 @@ use tauri::State;
 pub fn get_node_resource_metadata(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
     node_id: String,
 ) -> CommandResult<NodeResourceMetadata> {
     into_command_result(
-        NodeService::new(db.inner(), current_workspace.inner())
+        NodeService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
             .get_resource_metadata(&project_path, &node_id),
     )
 }
@@ -29,13 +30,14 @@ pub struct FileContent {
 pub fn read_node_file(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
+    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
     node_id: String,
 ) -> CommandResult<FileContent> {
     use crate::error::AppError;
 
     into_command_result((|| -> crate::application::AppResult<FileContent> {
-        let meta = NodeService::new(db.inner(), current_workspace.inner())
+        let meta = NodeService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
             .get_resource_metadata(&project_path, &node_id)?;
         let path = meta
             .resolved_path

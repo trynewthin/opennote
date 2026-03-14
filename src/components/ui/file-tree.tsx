@@ -313,6 +313,7 @@ type FolderProps = {
   element: string
   isSelectable?: boolean
   isSelect?: boolean
+  triggerOnContextMenu?: React.MouseEventHandler<HTMLButtonElement>
 } & React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
 
 const Folder = forwardRef<
@@ -327,6 +328,7 @@ const Folder = forwardRef<
       isSelectable = true,
       isSelect,
       children,
+      triggerOnContextMenu,
       ...props
     },
     ref
@@ -365,6 +367,10 @@ const Folder = forwardRef<
             onClick={() => {
               selectItem(value)
               handleExpand(value)
+            }}
+            onContextMenu={(event) => {
+              selectItem(value)
+              triggerOnContextMenu?.(event)
             }}
           >
             {expandedItems?.includes(value)
@@ -411,6 +417,7 @@ const File = forwardRef<
       isSelect,
       fileIcon,
       children,
+      onContextMenu,
       ...props
     },
     ref
@@ -435,6 +442,10 @@ const File = forwardRef<
           selectItem(value)
           handleSelect?.(value)
           onClick?.(event)
+        }}
+        onContextMenu={(event) => {
+          selectItem(value)
+          onContextMenu?.(event)
         }}
         {...props}
       >

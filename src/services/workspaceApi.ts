@@ -26,8 +26,13 @@ export const workspaceApi = {
         return invoke("save_project", { projectPath, data });
     },
 
-    async createProject(name: string, description: string): Promise<ProjectSummary> {
-        return invoke("create_project", { name, description });
+    async createProject(
+        name: string,
+        description: string,
+        folderPath?: string | null,
+        requestId?: string | null,
+    ): Promise<ProjectSummary> {
+        return invoke("create_project", { name, description, folderPath, requestId });
     },
 
     async deleteProject(projectPath: string): Promise<void> {

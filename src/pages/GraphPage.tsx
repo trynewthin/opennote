@@ -16,7 +16,7 @@ export function GraphPage() {
     const projectPath = searchParams.get("project");
     const decodedProjectPath = useMemo(() => (projectPath ? decodeURIComponent(projectPath) : null), [projectPath]);
     const { currentWorkspace } = useWorkspaceStore();
-    const { loadProject, projectConfig, setTransform, transform, persistProjectConfig, zoomIn, zoomOut, resetView } = useGraphStore();
+    const { loadProject, clearLoadedProject, projectConfig, setTransform, transform, persistProjectConfig, zoomIn, zoomOut, resetView } = useGraphStore();
     const transformRef = useRef(transform);
     useKeybindings();
 
@@ -24,13 +24,16 @@ export function GraphPage() {
 
     useEffect(() => {
         if (!currentWorkspace) {
+            clearLoadedProject();
             navigate("/");
             return;
         }
         if (decodedProjectPath) {
             void loadProject(decodedProjectPath);
+        } else {
+            clearLoadedProject();
         }
-    }, [currentWorkspace, decodedProjectPath, loadProject, navigate]);
+    }, [clearLoadedProject, currentWorkspace, decodedProjectPath, loadProject, navigate]);
 
     useEffect(() => {
         const cfg = configService.parse<{ viewX?: number; viewY?: number; viewScale?: number }>(projectConfig, {});

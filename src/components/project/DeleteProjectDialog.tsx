@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProjectSummary } from "@/types";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useGraphStore } from "@/stores/graphStore";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -21,17 +22,32 @@ interface DeleteProjectDialogProps {
     project: ProjectSummary;
 }
 
+function normalizeProjectPath(path: string | null) {
+    return (path ?? "")
+        .replace(/^\\\\\?\\/, "")
+        .replace(/\//g, "\\")
+        .toLowerCase();
+}
+
 export function DeleteProjectDialog({ open, onOpenChange, project }: DeleteProjectDialogProps) {
     const { t } = useTranslation();
     const [deleting, setDeleting] = useState(false);
     const { deleteProject } = useWorkspaceStore();
+    const { projectPath: loadedProjectPath, suppressNextPersistForProject } = useGraphStore();
+    const isDeletingLoadedProject = normalizeProjectPath(loadedProjectPath) === normalizeProjectPath(project.path);
 
     const handleDelete = async () => {
         setDeleting(true);
         try {
+            if (isDeletingLoadedProject) {
+                suppressNextPersistForProject(project.path);
+            }
             await deleteProject(project.path);
             onOpenChange(false);
         } catch (error) {
+            if (isDeletingLoadedProject) {
+                suppressNextPersistForProject(null);
+            }
             console.error("Delete failed:", error);
         } finally {
             setDeleting(false);

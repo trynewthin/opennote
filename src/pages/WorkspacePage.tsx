@@ -1,15 +1,57 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FolderOpen, Clock3, ArrowRight } from "lucide-react";
+import { FolderOpen, MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 
 export function WorkspacePage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
-    const { recentWorkspaces, chooseWorkspace, openWorkspace, error } = useWorkspaceStore();
+    const [pendingRemovePath, setPendingRemovePath] = useState<string | null>(null);
+    const titleRef = useRef<HTMLDivElement>(null);
+    const outerContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const el = titleRef.current;
+        const container = outerContainerRef.current;
+        if (!el || !container) return;
+
+        const fit = () => {
+            const maxWidth = container.getBoundingClientRect().width;
+            let lo = 1, hi = 800;
+            while (hi - lo > 0.5) {
+                const mid = (lo + hi) / 2;
+                el.style.fontSize = `${mid}px`;
+                if (el.getBoundingClientRect().width <= maxWidth) lo = mid;
+                else hi = mid;
+            }
+            el.style.fontSize = `${lo}px`;
+        };
+
+        fit();
+        const ro = new ResizeObserver(fit);
+        ro.observe(container);
+        return () => ro.disconnect();
+    }, []);
+    const { recentWorkspaces, chooseWorkspace, openWorkspace, removeRecentWorkspace, error } = useWorkspaceStore();
 
     const handleChooseWorkspace = async () => {
         setSubmitting(true);
@@ -33,60 +75,123 @@ export function WorkspacePage() {
         }
     };
 
+    const handleRemoveRecent = async () => {
+        if (!pendingRemovePath) return;
+        setSubmitting(true);
+        try {
+            await removeRecentWorkspace(pendingRemovePath);
+            setPendingRemovePath(null);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     return (
-        <div className="relative flex h-screen flex-col overflow-hidden bg-background">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.12),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.12),transparent_32%)]" />
-            <main className="relative z-10 flex flex-1 items-center justify-center px-6">
-                <div className="w-full max-w-4xl rounded-[28px] border border-black/8 bg-card/70 p-8 shadow-2xl shadow-black/6 backdrop-blur-xl dark:border-white/10 dark:shadow-black/20">
-                    <div className="mb-10 max-w-2xl">
-                        <p className="mb-3 text-sm uppercase tracking-[0.3em] text-muted-foreground">{t("workspace.eyebrow")}</p>
-                        <h1 className="text-4xl font-semibold tracking-tight">{t("workspace.title")}</h1>
-                        <p className="mt-3 text-base text-muted-foreground">{t("workspace.description")}</p>
-                    </div>
-
-                    <div className="mb-8 flex flex-wrap gap-3">
-                        <Button size="lg" onClick={handleChooseWorkspace} disabled={submitting}>
-                            <FolderOpen className="size-4" data-icon="inline-start" />
-                            {t("workspace.choose")}
-                        </Button>
-                    </div>
-
-                    {error && (
-                        <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                            {error}
+        <>
+        <div className="min-h-screen overflow-y-auto bg-background">
+            <main className="flex min-h-screen justify-center px-6 pt-32 pb-16 sm:pt-40 sm:pb-20">
+                <div ref={outerContainerRef} className="grid w-full max-w-2xl grid-rows-[auto_1fr] gap-14">
+                    <div className="flex w-full items-end text-left">
+                        <div ref={titleRef} className="whitespace-nowrap leading-[0.85] font-semibold tracking-[-0.11em] text-foreground">
+                            OpenNote
                         </div>
-                    )}
-
-                    <div className="rounded-2xl border border-black/8 bg-background/70 p-4 dark:border-white/10">
-                        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                            <Clock3 className="size-4" />
-                            {t("workspace.recent")}
-                        </div>
-
-                        {recentWorkspaces.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-muted-foreground dark:border-white/10">
-                                {t("workspace.noRecent")}
+                    </div>
+                    <div className="grid w-full grid-rows-[auto_auto_1fr] gap-10">
+                        <div className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-4">
+                            <div className="text-left">
+                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("workspace.title")}</h1>
                             </div>
-                        ) : (
-                            <div className="grid gap-3">
-                                {recentWorkspaces.map((path) => (
-                                    <button
-                                        key={path}
-                                        className="flex items-center justify-between rounded-xl border border-black/8 bg-card px-4 py-4 text-left transition hover:border-black/15 hover:bg-muted/40 dark:border-white/10 dark:hover:border-white/20"
-                                        onClick={() => void handleOpenRecent(path)}
-                                    >
-                                        <div>
-                                            <div className="text-sm font-medium">{path.split(/[\\/]/).at(-1) || path}</div>
-                                            <div className="text-xs text-muted-foreground">{path}</div>
-                                        </div>
-                                        <ArrowRight className="size-4 text-muted-foreground" />
-                                    </button>
-                                ))}
+                            <Button size="lg" onClick={handleChooseWorkspace} disabled={submitting}>
+                                <FolderOpen className="size-4" data-icon="inline-start" />
+                                {t("workspace.choose")}
+                            </Button>
+                        </div>
+
+                        {error && (
+                            <div className="w-full rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                                {error}
                             </div>
                         )}
+
+                        <section className="flex w-full flex-col gap-4">
+                            {recentWorkspaces.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-muted-foreground dark:border-white/10">
+                                    {t("workspace.noRecent")}
+                                </div>
+                            ) : (
+                                <div className="grid gap-3">
+                                    {recentWorkspaces.map((path) => (
+                                        <div
+                                            key={path}
+                                            className="flex items-center gap-2 rounded-2xl border border-black/8 px-2 py-2 transition hover:border-black/15 hover:bg-muted/40 dark:border-white/10 dark:hover:border-white/20"
+                                        >
+                                            <button
+                                                className="flex min-w-0 flex-1 items-center px-2 py-2 text-left"
+                                                onClick={() => void handleOpenRecent(path)}
+                                            >
+                                                <div className="min-w-0">
+                                                    <div className="truncate text-sm font-medium">{path.split(/[\\/]/).at(-1) || path}</div>
+                                                    <div className="truncate text-xs text-muted-foreground">{path}</div>
+                                                </div>
+                                            </button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger
+                                                    render={
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon-xs"
+                                                            className="mr-2"
+                                                            onClick={(event) => event.stopPropagation()}
+                                                        />
+                                                    }
+                                                >
+                                                    <MoreHorizontal className="size-3.5" />
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" side="bottom" sideOffset={6}>
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            setPendingRemovePath(path);
+                                                        }}
+                                                    >
+                                                        <Trash2 />
+                                                        {t("workspace.removeRecent")}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </section>
                     </div>
                 </div>
             </main>
         </div>
+        <AlertDialog open={!!pendingRemovePath} onOpenChange={(open) => !open && setPendingRemovePath(null)}>
+            <AlertDialogContent size="sm" onClick={(event) => event.stopPropagation()}>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>{t("workspace.removeRecentTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {t("workspace.removeRecentDesc")}
+                        <span className="mt-1 block break-all font-medium text-foreground/80">
+                            {pendingRemovePath}
+                        </span>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={submitting}>{t("common.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction
+                        variant="destructive"
+                        onClick={handleRemoveRecent}
+                        disabled={submitting}
+                    >
+                        {t("workspace.removeRecentConfirm")}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
     );
 }
