@@ -6,6 +6,7 @@ interface WorkspaceState {
     currentWorkspace: string | null;
     recentWorkspaces: string[];
     projects: ProjectSummary[];
+    folders: string[];
     settings: AppSettings | null;
     loading: boolean;
     error: string | null;
@@ -22,6 +23,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     currentWorkspace: null,
     recentWorkspaces: [],
     projects: [],
+    folders: [],
     settings: null,
     loading: false,
     error: null,
@@ -39,10 +41,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const projects = await workspaceApi.openWorkspace(path);
-            const settings = await workspaceApi.getAppSettings();
+            const [settings, folders] = await Promise.all([
+                workspaceApi.getAppSettings(),
+                workspaceApi.listWorkspaceFolders(),
+            ]);
             set({
                 currentWorkspace: path,
                 projects,
+                folders,
                 settings,
                 recentWorkspaces: settings.recent_workspaces,
                 loading: false,
@@ -71,8 +77,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     refreshProjects: async () => {
         const { currentWorkspace } = get();
         if (!currentWorkspace) return;
-        const projects = await workspaceApi.listProjects();
-        set({ projects });
+        const [projects, folders] = await Promise.all([
+            workspaceApi.listProjects(),
+            workspaceApi.listWorkspaceFolders(),
+        ]);
+        set({ projects, folders });
     },
 
     createProject: async (name, description) => {

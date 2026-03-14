@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Minus, Plus, RotateCcw } from "lucide-react";
 import { useGraphStore } from "@/stores/graphStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { useThemeStore } from "@/stores/themeStore";
 import { configService } from "@/services/configService";
-import { ArrowLeft, Sun, Moon, ZoomIn, ZoomOut } from "lucide-react";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { EditContentDialog } from "@/components/graph/EditContentDialog";
 import { useKeybindings } from "@/hooks/useKeybindings";
-
-import "./GraphPage.css";
 
 export function GraphPage() {
     const { t } = useTranslation();
@@ -19,9 +16,7 @@ export function GraphPage() {
     const projectPath = searchParams.get("project");
     const decodedProjectPath = useMemo(() => (projectPath ? decodeURIComponent(projectPath) : null), [projectPath]);
     const { currentWorkspace } = useWorkspaceStore();
-    const { loadProject, projectName, projectConfig, zoomIn, zoomOut, setTransform, transform, persistProjectConfig } = useGraphStore();
-    const { theme, toggleTheme } = useThemeStore();
-    const isDark = theme === "dark";
+    const { loadProject, projectConfig, setTransform, transform, persistProjectConfig, zoomIn, zoomOut, resetView } = useGraphStore();
     const transformRef = useRef(transform);
     useKeybindings();
 
@@ -56,50 +51,37 @@ export function GraphPage() {
                 viewScale: transformRef.current.scale,
             });
         };
-    }, [persistProjectConfig]);
+    }, [decodedProjectPath, persistProjectConfig]);
+
+    const zoomPercent = Math.round(transform.scale * 100);
 
     if (!decodedProjectPath) {
-        return <div>{t("graph.projectNotFound")}</div>;
+        return (
+            <div className="editor-canvas__empty">
+                <div className="editor-canvas__empty-title">{t("editor.noProjectSelected")}</div>
+                <div className="editor-canvas__empty-copy">{t("editor.noProjectSelectedDesc")}</div>
+            </div>
+        );
     }
 
     return (
-        <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background">
-            <header className="graph-header">
-                <div className="graph-toolbar graph-toolbar--left">
-                    <button className="graph-toolbar__btn" onClick={() => navigate("/projects")} title={t("graph.backToProjects")}>
-                        <ArrowLeft className="graph-toolbar__icon" />
-                    </button>
-                    <span className="graph-toolbar__divider" />
-                    <span className="graph-toolbar__title">{projectName || t("graph.untitledProject")}</span>
-                </div>
-
-                <div className="graph-toolbar graph-toolbar--right">
-                    <button className="graph-toolbar__btn" onClick={zoomIn} title={t("graph.zoomIn")}>
-                        <ZoomIn className="graph-toolbar__icon" />
-                    </button>
-                    <button className="graph-toolbar__btn" onClick={zoomOut} title={t("graph.zoomOut")}>
-                        <ZoomOut className="graph-toolbar__icon" />
-                    </button>
-                    <span className="graph-toolbar__divider" />
-                    <button
-                        className="graph-toolbar__btn"
-                        onClick={toggleTheme}
-                        title={isDark ? t("graph.switchToLight") : t("graph.switchToDark")}
-                    >
-                        {isDark ? (
-                            <Sun className="graph-toolbar__icon graph-toolbar__icon--sun" />
-                        ) : (
-                            <Moon className="graph-toolbar__icon graph-toolbar__icon--moon" />
-                        )}
-                    </button>
-                </div>
-            </header>
-
-            <main className="relative flex-1 overflow-hidden">
-                <GraphCanvas />
-            </main>
-
+        <div className="relative h-full w-full overflow-hidden">
+            <GraphCanvas />
             <EditContentDialog />
+
+            <div className="canvas-zoom-controls">
+                <button className="canvas-zoom-controls__btn" onClick={zoomOut} title={t("graph.zoomOut")}>
+                    <Minus className="size-3.5" />
+                </button>
+                <span className="canvas-zoom-controls__label">{zoomPercent}%</span>
+                <button className="canvas-zoom-controls__btn" onClick={zoomIn} title={t("graph.zoomIn")}>
+                    <Plus className="size-3.5" />
+                </button>
+                <span className="canvas-zoom-controls__divider" />
+                <button className="canvas-zoom-controls__btn" onClick={resetView} title={t("graph.resetView")}>
+                    <RotateCcw className="size-3.5" />
+                </button>
+            </div>
         </div>
     );
 }

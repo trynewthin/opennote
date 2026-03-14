@@ -18,9 +18,10 @@ interface ProjectFormDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     project?: ProjectSummary;
+    onSaved?: (project: ProjectSummary) => void;
 }
 
-export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDialogProps) {
+export function ProjectFormDialog({ open, onOpenChange, project, onSaved }: ProjectFormDialogProps) {
     const { t } = useTranslation();
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -41,9 +42,11 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
         setSubmitting(true);
         try {
             if (isEdit && project) {
-                await updateProject(project.path, name.trim(), description.trim());
+                const saved = await updateProject(project.path, name.trim(), description.trim());
+                onSaved?.(saved);
             } else {
-                await createProject(name.trim(), description.trim());
+                const saved = await createProject(name.trim(), description.trim());
+                onSaved?.(saved);
             }
             onOpenChange(false);
         } catch (error) {

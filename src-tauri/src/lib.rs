@@ -50,6 +50,8 @@ pub fn run() {
             commands::workspace::create_project,
             commands::workspace::delete_project,
             commands::workspace::copy_attachment,
+            commands::workspace::create_workspace_folder,
+            commands::workspace::list_workspace_folders,
             commands::node::get_node_resource_metadata,
             commands::node::read_node_file,
         ])

@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
 use std::time::UNIX_EPOCH;
 
@@ -134,6 +134,38 @@ impl<'a> WorkspaceService<'a> {
         self.path_resolver.resolve(project_path, reference)
     }
 
+    pub fn create_folder(&self, folder_path: &str) -> AppResult<()> {
+        let workspace = self.workspace_dir()?;
+        let relative = validate_workspace_relative_path(folder_path)?;
+        let target = workspace.join(relative);
+        std::fs::create_dir_all(&target)?;
+        Ok(())
+    }
+
+    pub fn list_folders(&self) -> AppResult<Vec<String>> {
+        let workspace = self.workspace_dir()?;
+        let mut folders = Vec::new();
+        self.collect_folders(&workspace, &mut folders)?;
+        Ok(folders)
+    }
+
+    fn collect_folders(&self, dir: &Path, folders: &mut Vec<String>) -> AppResult<()> {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let name = path.file_name().and_then(|v| v.to_str()).unwrap_or("");
+            if name.starts_with('.') || name == "attachments" {
+                continue;
+            }
+            folders.push(path.to_string_lossy().to_string());
+            self.collect_folders(&path, folders)?;
+        }
+        Ok(())
+    }
+
     pub fn workspace_dir(&self) -> AppResult<PathBuf> {
         self.current_workspace
             .0
@@ -145,9 +177,26 @@ impl<'a> WorkspaceService<'a> {
 
     fn scan_workspace(&self, workspace: &Path) -> AppResult<Vec<WorkspaceProjectSummary>> {
         let mut projects = Vec::new();
-        for entry in std::fs::read_dir(workspace)? {
+        self.scan_dir(workspace, &mut projects)?;
+        projects.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
+        Ok(projects)
+    }
+
+    fn scan_dir(&self, dir: &Path, projects: &mut Vec<WorkspaceProjectSummary>) -> AppResult<()> {
+        for entry in std::fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
+
+            if path.is_dir() {
+                // Skip hidden dirs and attachments
+                let name = path.file_name().and_then(|v| v.to_str()).unwrap_or("");
+                if name.starts_with('.') || name == "attachments" {
+                    continue;
+                }
+                self.scan_dir(&path, projects)?;
+                continue;
+            }
+
             if path.extension().and_then(|value| value.to_str()) != Some("on") {
                 continue;
             }
@@ -167,9 +216,7 @@ impl<'a> WorkspaceService<'a> {
                 }
             }
         }
-
-        projects.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
-        Ok(projects)
+        Ok(())
     }
 
     fn read_project_file(&self, path: &Path) -> AppResult<ProjectData> {
@@ -270,6 +317,41 @@ fn sanitize_file_name(name: &str) -> String {
             _ => ch,
         })
         .collect()
+}
+
+fn validate_workspace_relative_path(folder_path: &str) -> AppResult<PathBuf> {
+    let trimmed = folder_path.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::Validation("Folder path cannot be empty".into()));
+    }
+
+    let path = Path::new(trimmed);
+    if path.is_absolute() {
+        return Err(AppError::InvalidWorkspace(format!(
+            "Folder path must be relative to the workspace: {}",
+            folder_path
+        )));
+    }
+
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Normal(part) => normalized.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(AppError::InvalidWorkspace(format!(
+                    "Folder path is outside the workspace: {}",
+                    folder_path
+                )));
+            }
+        }
+    }
+
+    if normalized.as_os_str().is_empty() {
+        return Err(AppError::Validation("Folder path cannot be empty".into()));
+    }
+
+    Ok(normalized)
 }
 
 fn allocate_unique_path(base_dir: &Path, file_name: &str) -> PathBuf {

@@ -48,4 +48,12 @@ export const workspaceApi = {
     ): Promise<{ encoding: string; data: string; mime_type: string | null; file_name: string | null }> {
         return invoke("read_node_file", { projectPath, nodeId });
     },
+
+    async createWorkspaceFolder(folderPath: string): Promise<void> {
+        return invoke("create_workspace_folder", { folderPath });
+    },
+
+    async listWorkspaceFolders(): Promise<string[]> {
+        return invoke("list_workspace_folders");
+    },
 };

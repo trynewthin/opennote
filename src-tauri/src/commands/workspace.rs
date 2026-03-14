@@ -86,3 +86,22 @@ pub fn copy_attachment(
             .copy_attachment(&project_path, &source_path),
     )
 }
+
+#[tauri::command]
+pub fn create_workspace_folder(
+    db: State<Database>,
+    current_workspace: State<CurrentWorkspace>,
+    folder_path: String,
+) -> CommandResult<()> {
+    into_command_result(
+        WorkspaceService::new(db.inner(), current_workspace.inner()).create_folder(&folder_path),
+    )
+}
+
+#[tauri::command]
+pub fn list_workspace_folders(
+    db: State<Database>,
+    current_workspace: State<CurrentWorkspace>,
+) -> CommandResult<Vec<String>> {
+    into_command_result(WorkspaceService::new(db.inner(), current_workspace.inner()).list_folders())
+}

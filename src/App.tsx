@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import { hydrateLanguage } from "./i18n";
 import { WorkspacePage } from "./pages/WorkspacePage";
-import { ProjectsPage } from "./pages/ProjectsPage";
-import { GraphPage } from "./pages/GraphPage";
+import { EditorPage } from "./pages/EditorPage";
 import { useThemeStore } from "./stores/themeStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 
@@ -25,8 +24,7 @@ function App() {
     return (
         <Routes>
             <Route path="/" element={<WorkspacePage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/graph" element={<GraphPage />} />
+            <Route path="/editor" element={<EditorPage />} />
         </Routes>
     );
 }

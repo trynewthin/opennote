@@ -16,7 +16,7 @@ export function WorkspacePage() {
         try {
             const selected = await chooseWorkspace();
             if (selected) {
-                navigate("/projects");
+                navigate("/editor");
             }
         } finally {
             setSubmitting(false);
@@ -27,7 +27,7 @@ export function WorkspacePage() {
         setSubmitting(true);
         try {
             await openWorkspace(path);
-            navigate("/projects");
+            navigate("/editor");
         } finally {
             setSubmitting(false);
         }

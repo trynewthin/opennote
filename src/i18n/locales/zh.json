@@ -14,7 +14,7 @@
         "settings": "设置",
         "close": "关闭",
         "confirm": "确认",
-        "processing": "处理中…",
+        "processing": "处理中...",
         "error": "错误"
     },
     "projects": {
@@ -34,9 +34,22 @@
         "title": "选择工作区文件夹",
         "description": "项目会以纯文本 .on 文件存放在工作区目录中。打开一个文件夹后即可扫描和管理这些项目。",
         "choose": "打开工作区",
-        "recent": "最近使用的工作区",
+        "recent": "最近工作区",
         "noRecent": "还没有最近工作区。",
         "switch": "切换工作区"
+    },
+    "editor": {
+        "fileTree": "项目文件",
+        "refresh": "刷新项目列表",
+        "newFolder": "新建文件夹",
+        "newFolderName": "输入相对于工作区的文件夹路径",
+        "expandSidebar": "展开侧边栏",
+        "collapseSidebar": "收起侧边栏",
+        "noProjects": "这个工作区里还没有 .on 文件。",
+        "noProjectSelected": "选择一个项目文件",
+        "noProjectSelectedDesc": "从左侧边栏选择一个 .on 文件，在右侧画布中打开它。",
+        "emptyWorkspace": "当前工作区为空",
+        "emptyWorkspaceDesc": "从左侧边栏新建一个项目后即可开始编辑图谱。"
     },
     "projectForm": {
         "editTitle": "编辑项目",
@@ -50,17 +63,17 @@
     },
     "deleteProject": {
         "title": "删除项目",
-        "confirmMsg": "确定要删除「{{name}}」吗？",
+        "confirmMsg": "确定要删除“{{name}}”吗？",
         "noteWarning": "该项目包含 {{count}} 条笔记，删除后将无法恢复。",
-        "deleting": "删除中…",
+        "deleting": "删除中...",
         "confirmDelete": "确认删除"
     },
     "importExport": {
         "exportTitle": "导出项目",
         "importTitle": "导入项目",
         "projectLabel": "项目",
-        "exportDesc": "导出为 .on 格式文件，包含项目的所有节点、内容、连线和配置信息。",
-        "importDesc": "选择一个 .on 格式文件导入为新项目。",
+        "exportDesc": "导出为 .on 文件，包含所有节点、内容、关系和配置。",
+        "importDesc": "选择一个 .on 文件导入为新项目。",
         "exportAction": "选择位置并导出",
         "importAction": "选择文件并导入"
     },
@@ -71,7 +84,7 @@
         "resetView": "重置视图",
         "switchToLight": "切换到浅色模式",
         "switchToDark": "切换到深色模式",
-        "projectNotFound": "项目未找到",
+        "projectNotFound": "未找到项目",
         "untitledProject": "未命名项目"
     },
     "graphNode": {
@@ -85,7 +98,7 @@
         "addFile": "添加文件",
         "quickEdit": "快速编辑",
         "editNode": "编辑节点",
-        "startLink": "创建连线",
+        "startLink": "开始连线",
         "deleteNode": "删除节点",
         "noDirection": "无方向",
         "forward": "正向",
@@ -111,19 +124,19 @@
         "appearancePlaceholder": "外观设置正在建设中。",
         "appDesc": "知识图谱笔记桌面应用",
         "checkForUpdates": "检查更新",
-        "checking": "检查中…",
-        "updateAvailable": "版本 v{{version}} 可用。\n\n更新日志：\n{{notes}}\n\n是否立即下载并重启？",
-        "updateTitle": "发现新版本",
+        "checking": "检查中...",
+        "updateAvailable": "发现 v{{version}} 版本。\n\n更新说明：\n{{notes}}\n\n是否现在下载并重启？",
+        "updateTitle": "发现更新",
         "updateBtn": "更新",
-        "latestVersion": "已是最新版本。",
+        "latestVersion": "当前已经是最新版本。",
         "checkTitle": "检查更新",
         "updateError": "检查更新失败：{{error}}",
         "releaseTimeline": "版本时间线"
     },
     "time": {
         "justNow": "刚刚",
-        "minutesAgo": "{{count}}分钟前",
-        "hoursAgo": "{{count}}小时前",
-        "daysAgo": "{{count}}天前"
+        "minutesAgo": "{{count}} 分钟前",
+        "hoursAgo": "{{count}} 小时前",
+        "daysAgo": "{{count}} 天前"
     }
 }

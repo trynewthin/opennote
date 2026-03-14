@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { setLanguage } from "@/i18n";
 import { check } from "@tauri-apps/plugin-updater";
 import { ask, message } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -8,30 +10,31 @@ import "./SettingsDialog.css";
 
 type SettingsTab = "general" | "appearance" | "about";
 
-const TABS: { key: SettingsTab; label: string; icon: ReactNode }[] = [
-    { key: "general", label: "General", icon: <Settings className="settings-sidebar__lucide" /> },
-    { key: "appearance", label: "Appearance", icon: <Palette className="settings-sidebar__lucide" /> },
-    { key: "about", label: "About", icon: <Info className="settings-sidebar__lucide" /> },
-];
-
 interface SettingsDialogProps {
     onClose: () => void;
 }
 
 export function SettingsDialog({ onClose }: SettingsDialogProps) {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<SettingsTab>("general");
     const [collapsed, setCollapsed] = useState(false);
+
+    const TABS: { key: SettingsTab; label: string; icon: ReactNode }[] = [
+        { key: "general", label: t("settings.general"), icon: <Settings className="settings-sidebar__lucide" /> },
+        { key: "appearance", label: t("settings.appearance"), icon: <Palette className="settings-sidebar__lucide" /> },
+        { key: "about", label: t("settings.about"), icon: <Info className="settings-sidebar__lucide" /> },
+    ];
 
     return (
         <div className="settings-overlay" onClick={onClose}>
             <div className="settings-dialog" onClick={(event) => event.stopPropagation()}>
                 <aside className={`settings-sidebar ${collapsed ? "settings-sidebar--collapsed" : ""}`}>
                     <div className="settings-sidebar__top">
-                        {!collapsed && <h2 className="settings-sidebar__title">Settings</h2>}
+                        {!collapsed && <h2 className="settings-sidebar__title">{t("settings.title")}</h2>}
                         <button
                             className="settings-sidebar__toggle"
                             onClick={() => setCollapsed(!collapsed)}
-                            title={collapsed ? "Expand" : "Collapse"}
+                            title={collapsed ? t("settings.expand") : t("settings.collapse")}
                         >
                             {collapsed ? (
                                 <PanelLeftOpen className="settings-sidebar__lucide" />
@@ -74,22 +77,50 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
 }
 
 function GeneralSettings() {
+    const { t, i18n } = useTranslation();
+    const currentLang = i18n.language;
+
+    const handleLangChange = (lang: string) => {
+        setLanguage(lang);
+    };
+
     return (
         <div className="settings-section">
-            <p className="settings-placeholder">General settings are under construction.</p>
+            <div className="settings-field">
+                <div className="settings-field__info">
+                    <label className="settings-field__label">{t("settings.language")}</label>
+                    <p className="settings-field__desc">{t("settings.languageDesc")}</p>
+                </div>
+                <div className="settings-field__btns">
+                    <button
+                        className={`settings-field__btn ${currentLang === "en" ? "settings-field__btn--active" : ""}`}
+                        onClick={() => handleLangChange("en")}
+                    >
+                        English
+                    </button>
+                    <button
+                        className={`settings-field__btn ${currentLang.startsWith("zh") ? "settings-field__btn--active" : ""}`}
+                        onClick={() => handleLangChange("zh")}
+                    >
+                        中文
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
 
 function AppearanceSettings() {
+    const { t } = useTranslation();
     return (
         <div className="settings-section">
-            <p className="settings-placeholder">Appearance settings are under construction.</p>
+            <p className="settings-placeholder">{t("settings.appearancePlaceholder")}</p>
         </div>
     );
 }
 
 function AboutSettings() {
+    const { t } = useTranslation();
     const [isChecking, setIsChecking] = useState(false);
 
     const handleCheckUpdate = async () => {
@@ -98,12 +129,12 @@ function AboutSettings() {
             const update = await check();
             if (update) {
                 const yes = await ask(
-                    `Version v${update.version} is available.\n\nRelease notes:\n${update.body || "No release notes"}\n\nDownload and restart now?`,
+                    t("settings.updateAvailable", { version: update.version, notes: update.body || "" }),
                     {
-                        title: "Update Available",
+                        title: t("settings.updateTitle"),
                         kind: "info",
-                        okLabel: "Update",
-                        cancelLabel: "Cancel",
+                        okLabel: t("settings.updateBtn"),
+                        cancelLabel: t("common.cancel"),
                     },
                 );
                 if (yes) {
@@ -111,15 +142,15 @@ function AboutSettings() {
                     await relaunch();
                 }
             } else {
-                await message("You are already on the latest version.", {
-                    title: "Check for Updates",
+                await message(t("settings.latestVersion"), {
+                    title: t("settings.checkTitle"),
                     kind: "info",
                 });
             }
         } catch (error) {
             console.error("Failed to check for updates:", error);
-            await message(`Failed to check for updates: ${error}`, {
-                title: "Error",
+            await message(t("settings.updateError", { error: String(error) }), {
+                title: t("common.error"),
                 kind: "error",
             });
         } finally {
@@ -134,14 +165,14 @@ function AboutSettings() {
                 <p className="settings-about__version">
                     v{CHANGELOG[0].version} {CHANGELOG[0].tag}
                 </p>
-                <p className="settings-about__desc">Knowledge graph note-taking desktop app</p>
+                <p className="settings-about__desc">{t("settings.appDesc")}</p>
                 <button className="settings-about__update-btn" onClick={handleCheckUpdate} disabled={isChecking}>
-                    {isChecking ? "Checking..." : "Check for Updates"}
+                    {isChecking ? t("settings.checking") : t("settings.checkForUpdates")}
                 </button>
             </div>
 
             <div className="settings-timeline">
-                <h4 className="settings-timeline__heading">Release Timeline</h4>
+                <h4 className="settings-timeline__heading">{t("settings.releaseTimeline")}</h4>
                 {CHANGELOG.map((release) => (
                     <div key={release.version} className="settings-timeline__item">
                         <div className="settings-timeline__dot" />

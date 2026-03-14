@@ -1,0 +1,200 @@
+.editor-page {
+    display: grid;
+    grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+    height: 100vh;
+    overflow: hidden;
+    background: rgb(245, 245, 245);
+    transition: grid-template-columns 0.22s ease;
+}
+
+.editor-page--collapsed {
+    grid-template-columns: 48px minmax(0, 1fr);
+}
+
+:is(.dark) .editor-page {
+    background: rgb(12, 12, 12);
+}
+
+.editor-page__main {
+    position: relative;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ─── Tab Bar ─── */
+
+.editor-tabs {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    display: flex;
+    align-items: stretch;
+    height: 36px;
+    padding: 0 4px;
+    gap: 1px;
+    background: rgba(245, 245, 245, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+:is(.dark) .editor-tabs {
+    background: rgba(18, 18, 18, 0.85);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.editor-tabs__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    color: inherit;
+    opacity: 0.5;
+    font-size: 12px;
+    transition: opacity 0.12s, background 0.12s;
+}
+
+.editor-tabs__tab:hover {
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.editor-tabs__tab--active {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+:is(.dark) .editor-tabs__tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+:is(.dark) .editor-tabs__tab--active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.editor-tabs__tab-label {
+    font-weight: 500;
+}
+
+.editor-tabs__tab-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.12s, background 0.12s;
+}
+
+.editor-tabs__tab:hover .editor-tabs__tab-close {
+    opacity: 0.5;
+}
+
+.editor-tabs__tab-close:hover {
+    opacity: 1 !important;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+:is(.dark) .editor-tabs__tab-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* ─── Empty State ─── */
+
+.editor-canvas__empty {
+    display: grid;
+    place-content: center;
+    height: 100%;
+    padding: 24px;
+    text-align: center;
+    gap: 10px;
+}
+
+.editor-canvas__empty-title {
+    font-size: clamp(1.4rem, 2vw, 2rem);
+    font-weight: 650;
+    letter-spacing: -0.04em;
+}
+
+.editor-canvas__empty-copy {
+    max-width: 420px;
+    color: rgb(100 116 139);
+    line-height: 1.6;
+}
+/* ─── Canvas Zoom Controls ─── */
+
+.canvas-zoom-controls {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 8px;
+    background: rgba(250, 250, 250, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:is(.dark) .canvas-zoom-controls {
+    background: rgba(28, 28, 28, 0.82);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.canvas-zoom-controls__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.6;
+    transition: opacity 0.12s, background 0.12s;
+}
+
+.canvas-zoom-controls__btn:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+:is(.dark) .canvas-zoom-controls__btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.canvas-zoom-controls__label {
+    min-width: 40px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.5;
+    user-select: none;
+}
+
+.canvas-zoom-controls__divider {
+    width: 1px;
+    height: 16px;
+    margin: 0 2px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+:is(.dark) .canvas-zoom-controls__divider {
+    background: rgba(255, 255, 255, 0.1);
+}
