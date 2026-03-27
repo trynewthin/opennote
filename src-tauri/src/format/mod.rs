@@ -1,10 +1,12 @@
 mod json_format;
+mod mime_utils;
 mod path_resolver;
 mod project_data;
 
 use crate::error::AppResult;
 
 pub use json_format::JsonOnFormat;
+pub use mime_utils::is_text_mime;
 pub use path_resolver::{PathResolver, RelativePathResolver};
 pub use project_data::ProjectData;
 

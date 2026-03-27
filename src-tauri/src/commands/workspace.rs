@@ -1,8 +1,11 @@
-use crate::application::{CreateProjectRequestCache, CurrentWorkspace, WorkspaceService};
+use crate::application::{
+    AttachmentService, CreateProjectRequestCache, CurrentWorkspace, FileService, ProjectService,
+    WorkspaceService,
+};
 use crate::commands::{into_command_result, CommandResult};
 use crate::db::Database;
-use crate::format::ProjectData;
-use crate::models::{LoadedProject, WorkspaceProjectSummary};
+use crate::format::{is_text_mime, ProjectData};
+use crate::models::{FileContent, LoadedProject, WorkspaceFileEntry, WorkspaceProjectSummary};
 use tauri::State;
 
 #[tauri::command]
@@ -13,8 +16,15 @@ pub fn open_workspace(
     path: String,
 ) -> CommandResult<Vec<WorkspaceProjectSummary>> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .open_workspace(&path),
+        (|| -> crate::application::AppResult<Vec<WorkspaceProjectSummary>> {
+            WorkspaceService::new(db.inner(), current_workspace.inner()).open_workspace(&path)?;
+            ProjectService::new(
+                db.inner(),
+                current_workspace.inner(),
+                create_request_cache.inner(),
+            )
+            .scan_workspace()
+        })(),
     )
 }
 
@@ -25,8 +35,12 @@ pub fn list_projects(
     create_request_cache: State<CreateProjectRequestCache>,
 ) -> CommandResult<Vec<WorkspaceProjectSummary>> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .list_projects(),
+        ProjectService::new(
+            db.inner(),
+            current_workspace.inner(),
+            create_request_cache.inner(),
+        )
+        .scan_workspace(),
     )
 }
 
@@ -38,8 +52,12 @@ pub fn load_project(
     project_path: String,
 ) -> CommandResult<LoadedProject> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .load_project(&project_path),
+        ProjectService::new(
+            db.inner(),
+            current_workspace.inner(),
+            create_request_cache.inner(),
+        )
+        .load_project(&project_path),
     )
 }
 
@@ -52,8 +70,12 @@ pub fn save_project(
     data: ProjectData,
 ) -> CommandResult<WorkspaceProjectSummary> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .save_project(&project_path, &data),
+        ProjectService::new(
+            db.inner(),
+            current_workspace.inner(),
+            create_request_cache.inner(),
+        )
+        .save_project(&project_path, &data),
     )
 }
 
@@ -68,8 +90,17 @@ pub fn create_project(
     request_id: Option<String>,
 ) -> CommandResult<WorkspaceProjectSummary> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .create_project(&name, &description, folder_path.as_deref(), request_id.as_deref()),
+        ProjectService::new(
+            db.inner(),
+            current_workspace.inner(),
+            create_request_cache.inner(),
+        )
+        .create_project(
+            &name,
+            &description,
+            folder_path.as_deref(),
+            request_id.as_deref(),
+        ),
     )
 }
 
@@ -81,8 +112,12 @@ pub fn delete_project(
     project_path: String,
 ) -> CommandResult<()> {
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .delete_project(&project_path),
+        ProjectService::new(
+            db.inner(),
+            current_workspace.inner(),
+            create_request_cache.inner(),
+        )
+        .delete_project(&project_path),
     )
 }
 
@@ -94,8 +129,9 @@ pub fn copy_attachment(
     project_path: String,
     source_path: String,
 ) -> CommandResult<String> {
+    let _ = create_request_cache;
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
+        AttachmentService::new(db.inner(), current_workspace.inner())
             .copy_attachment(&project_path, &source_path),
     )
 }
@@ -107,9 +143,9 @@ pub fn create_workspace_folder(
     create_request_cache: State<CreateProjectRequestCache>,
     folder_path: String,
 ) -> CommandResult<()> {
+    let _ = create_request_cache;
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .create_folder(&folder_path),
+        FileService::new(db.inner(), current_workspace.inner()).create_folder(&folder_path),
     )
 }
 
@@ -119,10 +155,8 @@ pub fn list_workspace_folders(
     current_workspace: State<CurrentWorkspace>,
     create_request_cache: State<CreateProjectRequestCache>,
 ) -> CommandResult<Vec<String>> {
-    into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .list_folders(),
-    )
+    let _ = create_request_cache;
+    into_command_result(FileService::new(db.inner(), current_workspace.inner()).list_folders())
 }
 
 #[tauri::command]
@@ -130,11 +164,9 @@ pub fn list_workspace_tree(
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
     create_request_cache: State<CreateProjectRequestCache>,
-) -> CommandResult<Vec<crate::models::WorkspaceFileEntry>> {
-    into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .scan_all_files(),
-    )
+) -> CommandResult<Vec<WorkspaceFileEntry>> {
+    let _ = create_request_cache;
+    into_command_result(FileService::new(db.inner(), current_workspace.inner()).scan_all_files())
 }
 
 #[tauri::command]
@@ -145,9 +177,9 @@ pub fn rename_file(
     path: String,
     new_name: String,
 ) -> CommandResult<String> {
+    let _ = create_request_cache;
     into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .rename_file(&path, &new_name),
+        FileService::new(db.inner(), current_workspace.inner()).rename_file(&path, &new_name),
     )
 }
 
@@ -158,10 +190,8 @@ pub fn delete_file(
     create_request_cache: State<CreateProjectRequestCache>,
     path: String,
 ) -> CommandResult<()> {
-    into_command_result(
-        WorkspaceService::new(db.inner(), current_workspace.inner(), create_request_cache.inner())
-            .delete_file(&path),
-    )
+    let _ = create_request_cache;
+    into_command_result(FileService::new(db.inner(), current_workspace.inner()).delete_file(&path))
 }
 
 #[tauri::command]
@@ -170,33 +200,22 @@ pub fn read_file_by_path(
     current_workspace: State<CurrentWorkspace>,
     create_request_cache: State<CreateProjectRequestCache>,
     path: String,
-) -> CommandResult<crate::commands::node::FileContent> {
-    use crate::commands::node::FileContent;
+) -> CommandResult<FileContent> {
+    let _ = create_request_cache;
 
     into_command_result((|| -> crate::application::AppResult<FileContent> {
-        let service = WorkspaceService::new(
-            db.inner(),
-            current_workspace.inner(),
-            create_request_cache.inner(),
-        );
+        let service = WorkspaceService::new(db.inner(), current_workspace.inner());
         let resolved = service.ensure_within_workspace(&path)?;
         let file_name = resolved
             .file_name()
-            .and_then(|n| n.to_str())
+            .and_then(|name| name.to_str())
             .map(String::from);
         let mime = mime_guess::from_path(&resolved)
             .first_or_octet_stream()
             .essence_str()
             .to_string();
 
-        let is_text = mime.starts_with("text/")
-            || mime == "application/json"
-            || mime == "application/javascript"
-            || mime == "application/xml"
-            || mime == "application/x-yaml"
-            || mime == "application/toml";
-
-        if is_text {
+        if is_text_mime(&mime) {
             let text = std::fs::read_to_string(&resolved)?;
             Ok(FileContent {
                 encoding: "text".into(),

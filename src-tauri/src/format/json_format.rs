@@ -11,13 +11,18 @@ impl OnFormat for JsonOnFormat {
     }
 
     fn deserialize(&self, raw: &str) -> AppResult<ProjectData> {
-        let data: ProjectData = serde_json::from_str(raw)?;
-        if data.on_version != "1" {
-            return Err(AppError::Validation(format!(
-                "Unsupported .on version: {}",
-                data.on_version
-            )));
+        let value: serde_json::Value = serde_json::from_str(raw)?;
+        let version = value
+            .get("on_version")
+            .and_then(|value| value.as_str())
+            .unwrap_or("1");
+
+        match version {
+            "1" => serde_json::from_value(value).map_err(Into::into),
+            other => Err(AppError::Validation(format!(
+                "Unsupported .on version: {}. Please update OpenNote.",
+                other
+            ))),
         }
-        Ok(data)
     }
 }
