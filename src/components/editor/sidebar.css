@@ -1,6 +1,6 @@
 .editor-sidebar {
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto 1fr;
     height: 100%;
     overflow: hidden;
     border-right: 1px solid rgba(0, 0, 0, 0.08);
@@ -24,13 +24,17 @@
     padding: 16px;
 }
 
+/* section top padding reduced to close gap with top bar */
+.editor-sidebar__section {
+    padding-top: 8px;
+}
+
 .editor-sidebar__top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 10px 14px 6px;
     min-height: 48px;
 }
 
@@ -44,9 +48,6 @@
     display: none;
 }
 
-:is(.dark) .editor-sidebar__top {
-    border-bottom-color: rgba(255, 255, 255, 0.06);
-}
 
 .editor-sidebar__workspace-name {
     flex: 1;
@@ -172,7 +173,6 @@
 .editor-sidebar__file-tree,
 .editor-sidebar__file-tree > div,
 .editor-sidebar__file-tree [data-radix-scroll-area-viewport],
-.editor-sidebar__file-tree [data-orientation],
 .editor-sidebar__file-tree [data-state] {
     width: 100%;
 }
@@ -190,7 +190,7 @@
 .editor-sidebar__file-tree button {
     font-size: 13px !important;
     gap: 8px !important;
-    padding: 5px 8px !important;
+    padding: 7px 10px !important;
     width: 100% !important;
     border-radius: 6px !important;
 }

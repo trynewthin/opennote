@@ -16,3 +16,11 @@ pub struct LoadedProject {
     pub path: String,
     pub data: ProjectData,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceFileEntry {
+    pub path: String,
+    pub name: String,
+    pub kind: String, // "file" | "directory"
+    pub children: Vec<WorkspaceFileEntry>,
+}

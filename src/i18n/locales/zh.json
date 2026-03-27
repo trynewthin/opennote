@@ -56,7 +56,9 @@
         "noProjectSelected": "选择一个项目文件",
         "noProjectSelectedDesc": "从左侧边栏选择一个 .on 文件，在右侧画布中打开它。",
         "emptyWorkspace": "当前工作区为空",
-        "emptyWorkspaceDesc": "从左侧边栏新建一个项目后即可开始编辑图谱。"
+        "emptyWorkspaceDesc": "从左侧边栏新建一个项目后即可开始编辑图谱。",
+        "rename": "重命名",
+        "confirmDelete": "确定要删除 {{name}} 吗？此操作不可撤销。"
     },
     "projectForm": {
         "editTitle": "编辑项目",

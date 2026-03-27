@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { workspaceApi } from "@/services/workspaceApi";
-import type { AppSettings, ProjectSummary } from "@/types";
+import type { AppSettings, ProjectSummary, WorkspaceFileEntry } from "@/types";
 
 interface WorkspaceState {
     currentWorkspace: string | null;
     recentWorkspaces: string[];
     projects: ProjectSummary[];
     folders: string[];
+    fileTree: WorkspaceFileEntry[];
     settings: AppSettings | null;
     loading: boolean;
     error: string | null;
@@ -30,6 +31,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     recentWorkspaces: [],
     projects: [],
     folders: [],
+    fileTree: [],
     settings: null,
     loading: false,
     error: null,
@@ -40,21 +42,26 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
             settings,
             recentWorkspaces: settings.recent_workspaces,
         });
+        if (settings.last_workspace) {
+            await get().openWorkspace(settings.last_workspace);
+        }
         return settings;
     },
 
     openWorkspace: async (path) => {
         set({ loading: true, error: null });
         try {
-            const projects = await workspaceApi.openWorkspace(path);
-            const [settings, folders] = await Promise.all([
+            const [projects, settings, folders, fileTree] = await Promise.all([
+                workspaceApi.openWorkspace(path),
                 workspaceApi.getAppSettings(),
                 workspaceApi.listWorkspaceFolders(),
+                workspaceApi.listWorkspaceTree(),
             ]);
             set({
                 currentWorkspace: path,
                 projects,
                 folders,
+                fileTree,
                 settings,
                 recentWorkspaces: settings.recent_workspaces,
                 loading: false,
@@ -83,11 +90,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     refreshProjects: async () => {
         const { currentWorkspace } = get();
         if (!currentWorkspace) return;
-        const [projects, folders] = await Promise.all([
+        const [projects, folders, fileTree] = await Promise.all([
             workspaceApi.listProjects(),
             workspaceApi.listWorkspaceFolders(),
+            workspaceApi.listWorkspaceTree(),
         ]);
-        set({ projects, folders });
+        set({ projects, folders, fileTree });
     },
 
     createProject: async (name, description, folderPath, requestId) => {

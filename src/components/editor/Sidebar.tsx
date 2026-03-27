@@ -6,6 +6,7 @@ import {
     FolderOpen,
     FolderPlus,
     Moon,
+    Menu,
     PanelLeftClose,
     PanelLeftOpen,
     Pencil,
@@ -15,14 +16,19 @@ import {
     Sun,
     Trash2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { Tree, File, Folder, type TreeViewElement } from "@/components/ui/file-tree";
 import { DeleteProjectDialog, ProjectFormDialog } from "@/components/project";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { workspaceApi } from "@/services/workspaceApi";
-import type { ProjectSummary } from "@/types";
+import type { ProjectSummary, WorkspaceFileEntry } from "@/types";
 import "./sidebar.css";
 
 interface SidebarTreeElement extends TreeViewElement {
@@ -43,68 +49,21 @@ function normalizeRelativePath(path: string) {
     return path.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
 }
 
-/** Build nested SidebarTreeElement[] from flat projects + folder paths */
-function buildTree(projects: ProjectSummary[], folders: string[], workspacePath: string | null): SidebarTreeElement[] {
-    if (!workspacePath) return [];
-
-    const normalizedWorkspace = workspacePath.replace(/\\/g, "/").replace(/\/$/, "");
-    const root: SidebarTreeElement[] = [];
-    const folderMap = new Map<string, SidebarTreeElement[]>();
-    folderMap.set("", root);
-
-    const ensureFolder = (segments: string[]): SidebarTreeElement[] => {
-        let currentPath = "";
-        let parent = root;
-
-        for (const seg of segments) {
-            currentPath = currentPath ? `${currentPath}/${seg}` : seg;
-            if (!folderMap.has(currentPath)) {
-                const folder: SidebarTreeElement = {
-                    id: `${normalizedWorkspace}/${currentPath}`,
-                    name: seg,
-                    path: `${normalizedWorkspace}/${currentPath}`,
-                    relativePath: currentPath,
-                    type: "folder",
-                    children: [],
-                };
-                parent.push(folder);
-                folderMap.set(currentPath, folder.children ?? []);
-            }
-            parent = folderMap.get(currentPath) ?? root;
-        }
-        return parent;
-    };
-
-    for (const folderPath of folders) {
-        const normalized = folderPath.replace(/\\/g, "/");
-        const relative = normalized.startsWith(normalizedWorkspace + "/")
-            ? normalized.slice(normalizedWorkspace.length + 1)
-            : normalized;
-        if (relative) {
-            ensureFolder(relative.split("/"));
-        }
-    }
-
-    for (const project of projects) {
-        const normalizedPath = project.path.replace(/\\/g, "/");
-        const relative = normalizedPath.startsWith(normalizedWorkspace + "/")
-            ? normalizedPath.slice(normalizedWorkspace.length + 1)
-            : normalizedPath;
-        const parts = relative.split("/");
-        const fileName = parts.pop() ?? project.name;
-        const parentChildren = parts.length > 0 ? ensureFolder(parts) : root;
-
-        parentChildren.push({
-            id: project.path,
-            name: project.name || fileName.replace(/\.on$/, ""),
-            path: project.path,
-            relativePath: relative,
-            type: "file",
+/** Convert backend WorkspaceFileEntry tree to SidebarTreeElement[], attaching project data for .on files */
+function convertTree(entries: WorkspaceFileEntry[], projectsByPath: Map<string, ProjectSummary>): SidebarTreeElement[] {
+    return entries.map((entry) => {
+        const normalizedPath = entry.path.replace(/\\/g, "/");
+        const project = projectsByPath.get(normalizedPath);
+        return {
+            id: entry.path,
+            name: project?.name ?? (entry.name.endsWith(".on") ? entry.name.replace(/\.on$/, "") : entry.name),
+            path: entry.path,
+            relativePath: entry.name,
+            type: entry.kind === "directory" ? "folder" : "file",
             project,
-        });
-    }
-
-    return root;
+            children: entry.kind === "directory" ? convertTree(entry.children, projectsByPath) : undefined,
+        } satisfies SidebarTreeElement;
+    });
 }
 
 function RenderTree({
@@ -158,7 +117,7 @@ interface SidebarProps {
 export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarProps) {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { currentWorkspace, projects, folders, loading, refreshProjects } = useWorkspaceStore();
+    const { currentWorkspace, projects, fileTree, loading, refreshProjects } = useWorkspaceStore();
     const [createOpen, setCreateOpen] = useState(false);
     const [createFolderPath, setCreateFolderPath] = useState<string | null>(null);
     const [editingProject, setEditingProject] = useState<ProjectSummary | null>(null);
@@ -172,9 +131,14 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
         [currentWorkspace, t],
     );
 
+    const projectsByPath = useMemo(
+        () => new Map(projects.map((p) => [p.path.replace(/\\/g, "/"), p])),
+        [projects],
+    );
+
     const treeElements = useMemo(
-        () => buildTree(projects, folders, currentWorkspace),
-        [projects, folders, currentWorkspace],
+        () => convertTree(fileTree, projectsByPath),
+        [fileTree, projectsByPath],
     );
 
     useEffect(() => {
@@ -208,8 +172,8 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
 
     const closeContextMenu = () => setContextMenu(null);
 
-    const openProject = (projectPath: string) => {
-        navigate(`/editor?project=${encodeURIComponent(projectPath)}`);
+    const openFile = (filePath: string) => {
+        navigate(`/editor?file=${encodeURIComponent(filePath)}`);
     };
 
     const openCreateProjectDialog = (folderPath?: string | null) => {
@@ -251,6 +215,31 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
         action();
     };
 
+    const handleRename = async (item: SidebarTreeElement) => {
+        const current = item.name;
+        const newName = window.prompt(t("editor.rename"), current);
+        if (!newName?.trim() || newName.trim() === current) return;
+        try {
+            await workspaceApi.renameFile(item.path, newName.trim());
+            await refreshProjects();
+        } catch (error) {
+            console.error("Rename failed:", error);
+            window.alert(String(error));
+        }
+    };
+
+    const handleDeleteFile = async (item: SidebarTreeElement) => {
+        const confirmed = window.confirm(t("editor.confirmDelete", { name: item.name }));
+        if (!confirmed) return;
+        try {
+            await workspaceApi.deleteFile(item.path);
+            await refreshProjects();
+        } catch (error) {
+            console.error("Delete failed:", error);
+            window.alert(String(error));
+        }
+    };
+
     const menuProject = contextMenu?.item.project;
 
     return (
@@ -258,14 +247,33 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
             <aside className={`editor-sidebar${collapsed ? " editor-sidebar--collapsed" : ""}`}>
                 <div className="editor-sidebar__top">
                     {!collapsed && (
-                        <button
-                            className="editor-sidebar__leave-btn"
-                            onClick={() => navigate("/")}
-                            title={t("workspace.switch")}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger
+                            render={
+                                <button
+                                    className="editor-sidebar__leave-btn"
+                                    title={t("editor.menu")}
+                                />
+                            }
                         >
-                            <ArrowLeft className="size-4" />
-                        </button>
-                    )}
+                            <Menu className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" side="bottom" sideOffset={6}>
+                            <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                                <Settings className="size-4 mr-2" />
+                                {t("common.settings")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={toggleTheme}>
+                                {theme === "dark" ? <Sun className="size-4 mr-2" /> : <Moon className="size-4 mr-2" />}
+                                {theme === "dark" ? t("projects.lightMode") : t("projects.darkMode")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate("/")}>
+                                <ArrowLeft className="size-4 mr-2" />
+                                {t("workspace.switch")}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
 
                     {!collapsed && (
                         <span className="editor-sidebar__workspace-name" title={currentWorkspace ?? ""}>
@@ -323,7 +331,7 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
                             >
                                 <RenderTree
                                     elements={treeElements}
-                                    onFileSelect={openProject}
+                                    onFileSelect={openFile}
                                     onItemContextMenu={handleItemContextMenu}
                                 />
                             </Tree>
@@ -331,22 +339,6 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
                     </div>
                 </div>
 
-                <div className="editor-sidebar__bottom">
-                    <div className="editor-sidebar__action-grid">
-                        <Button variant="outline" onClick={() => setSettingsOpen(true)}>
-                            <Settings className="size-4" data-icon="inline-start" />
-                            {t("common.settings")}
-                        </Button>
-                        <Button variant="outline" onClick={toggleTheme}>
-                            {theme === "dark" ? (
-                                <Sun className="size-4" data-icon="inline-start" />
-                            ) : (
-                                <Moon className="size-4" data-icon="inline-start" />
-                            )}
-                            {theme === "dark" ? t("projects.lightMode") : t("projects.darkMode")}
-                        </Button>
-                    </div>
-                </div>
             </aside>
 
             {contextMenu && (
@@ -380,6 +372,20 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
                             </button>
                             <button
                                 className="editor-sidebar__context-menu-item"
+                                onClick={() => runMenuAction(() => void handleRename(contextMenu.item))}
+                            >
+                                <Pencil className="size-4" />
+                                {t("editor.rename")}
+                            </button>
+                            <button
+                                className="editor-sidebar__context-menu-item editor-sidebar__context-menu-item--danger"
+                                onClick={() => runMenuAction(() => void handleDeleteFile(contextMenu.item))}
+                            >
+                                <Trash2 className="size-4" />
+                                {t("common.delete")}
+                            </button>
+                            <button
+                                className="editor-sidebar__context-menu-item"
                                 onClick={() =>
                                     runMenuAction(() => {
                                         void refreshProjects();
@@ -394,7 +400,7 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
                         <>
                             <button
                                 className="editor-sidebar__context-menu-item"
-                                onClick={() => runMenuAction(() => openProject(menuProject.path))}
+                                onClick={() => runMenuAction(() => openFile(menuProject.path))}
                             >
                                 <FolderOpen className="size-4" />
                                 {t("common.open")}
@@ -414,7 +420,24 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
                                 {t("common.delete")}
                             </button>
                         </>
-                    ) : null}
+                    ) : (
+                        <>
+                            <button
+                                className="editor-sidebar__context-menu-item"
+                                onClick={() => runMenuAction(() => void handleRename(contextMenu.item))}
+                            >
+                                <Pencil className="size-4" />
+                                {t("editor.rename")}
+                            </button>
+                            <button
+                                className="editor-sidebar__context-menu-item editor-sidebar__context-menu-item--danger"
+                                onClick={() => runMenuAction(() => void handleDeleteFile(contextMenu.item))}
+                            >
+                                <Trash2 className="size-4" />
+                                {t("common.delete")}
+                            </button>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -427,7 +450,7 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
                     }
                 }}
                 folderPath={createFolderPath}
-                onSaved={(project) => navigate(`/editor?project=${encodeURIComponent(project.path)}`)}
+                onSaved={(project) => navigate(`/editor?file=${encodeURIComponent(project.path)}`)}
             />
             <ProjectFormDialog
                 open={!!editingProject}
@@ -439,7 +462,7 @@ export function Sidebar({ currentProjectPath, collapsed, onCollapse }: SidebarPr
                 project={editingProject ?? undefined}
                 onSaved={(project) => {
                     if (editingProject?.path === currentProjectPath) {
-                        navigate(`/editor?project=${encodeURIComponent(project.path)}`, { replace: true });
+                        navigate(`/editor?file=${encodeURIComponent(project.path)}`, { replace: true });
                     }
                 }}
             />

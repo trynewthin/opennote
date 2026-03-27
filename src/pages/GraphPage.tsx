@@ -5,6 +5,7 @@ import { Minus, Plus, RotateCcw } from "lucide-react";
 import { useGraphStore } from "@/stores/graphStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { configService } from "@/services/configService";
+import { flushPendingSave } from "@/lib/debouncedPersist";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { EditContentDialog } from "@/components/graph/EditContentDialog";
 import { useKeybindings } from "@/hooks/useKeybindings";
@@ -13,7 +14,7 @@ export function GraphPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const projectPath = searchParams.get("project");
+    const projectPath = searchParams.get("file") ?? searchParams.get("project");
     const decodedProjectPath = useMemo(() => (projectPath ? decodeURIComponent(projectPath) : null), [projectPath]);
     const { currentWorkspace } = useWorkspaceStore();
     const { loadProject, clearLoadedProject, projectConfig, setTransform, transform, persistProjectConfig, zoomIn, zoomOut, resetView } = useGraphStore();
@@ -55,6 +56,18 @@ export function GraphPage() {
             });
         };
     }, [decodedProjectPath, persistProjectConfig]);
+
+    // Flush any pending debounced saves when the page is hidden or unloaded,
+    // so rapid drag-and-drop positions are never lost on refresh.
+    useEffect(() => {
+        const flush = () => { void flushPendingSave(); };
+        document.addEventListener("visibilitychange", flush);
+        window.addEventListener("beforeunload", flush);
+        return () => {
+            document.removeEventListener("visibilitychange", flush);
+            window.removeEventListener("beforeunload", flush);
+        };
+    }, []);
 
     const zoomPercent = Math.round(transform.scale * 100);
 

@@ -7,7 +7,7 @@ use crate::application::AppResult;
 use crate::db::Database;
 use crate::error::AppError;
 use crate::format::{JsonOnFormat, OnFormat, PathResolver, ProjectData, RelativePathResolver};
-use crate::models::{LoadedProject, WorkspaceProjectSummary};
+use crate::models::{LoadedProject, WorkspaceFileEntry, WorkspaceProjectSummary};
 
 pub struct CurrentWorkspace(pub Mutex<Option<PathBuf>>);
 
@@ -89,6 +89,7 @@ impl<'a> WorkspaceService<'a> {
 
         *self.current_workspace.0.lock().unwrap() = Some(path.clone());
         self.db.push_recent_workspace(workspace_path)?;
+        self.db.set_last_workspace(Some(workspace_path))?;
         self.scan_workspace(&path)
     }
 
@@ -237,6 +238,96 @@ impl<'a> WorkspaceService<'a> {
             .unwrap()
             .clone()
             .ok_or_else(|| AppError::InvalidWorkspace("No workspace is currently open".into()))
+    }
+
+    pub fn rename_file(&self, path: &str, new_name: &str) -> AppResult<String> {
+        let old_path = self.ensure_within_workspace(path)?;
+        let new_name = new_name.trim();
+        if new_name.is_empty() || new_name.contains('/') || new_name.contains('\\') {
+            return Err(AppError::Validation("Invalid file name".into()));
+        }
+        let parent = old_path.parent().ok_or_else(|| {
+            AppError::InvalidWorkspace("Cannot rename workspace root".into())
+        })?;
+        let new_path = parent.join(new_name);
+        if new_path.exists() {
+            return Err(AppError::Validation(format!(
+                "A file named '{}' already exists",
+                new_name
+            )));
+        }
+        std::fs::rename(&old_path, &new_path)?;
+        Ok(new_path.to_string_lossy().to_string())
+    }
+
+    pub fn delete_file(&self, path: &str) -> AppResult<()> {
+        let target = self.ensure_within_workspace(path)?;
+        if target.is_dir() {
+            std::fs::remove_dir_all(&target)?;
+        } else {
+            std::fs::remove_file(&target)?;
+        }
+        Ok(())
+    }
+
+    pub fn ensure_within_workspace(&self, path: &str) -> AppResult<PathBuf> {
+        let workspace = self.workspace_dir()?;
+        let raw = PathBuf::from(path);
+        let normalized = std::fs::canonicalize(&raw).unwrap_or(raw);
+        let workspace_normalized = std::fs::canonicalize(&workspace).unwrap_or(workspace);
+        if !normalized.starts_with(&workspace_normalized) {
+            return Err(AppError::InvalidWorkspace(format!(
+                "Path is outside the current workspace: {}",
+                normalized.display()
+            )));
+        }
+        Ok(normalized)
+    }
+
+    /// Recursively scan all files and directories in the workspace.
+    /// Recursively scan all files and directories in the workspace.
+    /// Entries matching EXCLUDE_PATTERNS (hardcoded in Rust) are skipped.
+    pub fn scan_all_files(&self) -> AppResult<Vec<WorkspaceFileEntry>> {
+        let workspace = self.workspace_dir()?;
+        let mut entries = self.scan_dir_all(&workspace)?;
+        sort_entries(&mut entries);
+        Ok(entries)
+    }
+
+    fn scan_dir_all(&self, dir: &Path) -> AppResult<Vec<WorkspaceFileEntry>> {
+        let mut entries = Vec::new();
+        for fs_entry in std::fs::read_dir(dir)? {
+            let fs_entry = fs_entry?;
+            let path = fs_entry.path();
+            let name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+
+            if is_excluded_static(&name) {
+                continue;
+            }
+
+            if path.is_dir() {
+                let mut children = self.scan_dir_all(&path)?;
+                sort_entries(&mut children);
+                entries.push(WorkspaceFileEntry {
+                    path: path.to_string_lossy().to_string(),
+                    name,
+                    kind: "directory".to_string(),
+                    children,
+                });
+            } else {
+                entries.push(WorkspaceFileEntry {
+                    path: path.to_string_lossy().to_string(),
+                    name,
+                    kind: "file".to_string(),
+                    children: vec![],
+                });
+            }
+        }
+        Ok(entries)
     }
 
     fn scan_workspace(&self, workspace: &Path) -> AppResult<Vec<WorkspaceProjectSummary>> {
@@ -455,6 +546,56 @@ fn allocate_unique_path(base_dir: &Path, file_name: &str) -> PathBuf {
         }
         index += 1;
     }
+}
+
+/// Patterns to exclude from the file tree scan.
+/// Each entry can be:
+///   - An exact name  (e.g. ".git")
+///   - A glob-style wildcard prefix  (e.g. "*.tmp"  → matches any name ending in ".tmp")
+///   - A glob-style wildcard suffix  (e.g. "node_*" → matches any name starting with "node_")
+/// Currently empty – all files and directories are visible.
+const EXCLUDE_PATTERNS: &[&str] = &[];
+
+fn is_excluded(name: &str, patterns: &[String]) -> bool {
+    for pattern in patterns {
+        let p = pattern.as_str();
+        let matched = if let Some(suffix) = p.strip_prefix('*') {
+            name.ends_with(suffix)
+        } else if let Some(prefix) = p.strip_suffix('*') {
+            name.starts_with(prefix)
+        } else {
+            name == p
+        };
+        if matched {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_excluded_static(name: &str) -> bool {
+    for pattern in EXCLUDE_PATTERNS {
+        let matched = if let Some(suffix) = pattern.strip_prefix('*') {
+            name.ends_with(suffix)
+        } else if let Some(prefix) = pattern.strip_suffix('*') {
+            name.starts_with(prefix)
+        } else {
+            name == *pattern
+        };
+        if matched {
+            return true;
+        }
+    }
+    false
+}
+
+fn sort_entries(entries: &mut Vec<crate::models::WorkspaceFileEntry>) {
+    entries.sort_by(|a, b| {
+        // Directories first, then files; within each group sort by name
+        let a_is_dir = a.kind == "directory";
+        let b_is_dir = b.kind == "directory";
+        b_is_dir.cmp(&a_is_dir).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+    });
 }
 
 #[cfg(test)]

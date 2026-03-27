@@ -56,7 +56,9 @@
         "noProjectSelected": "Select a project file",
         "noProjectSelectedDesc": "Choose a .on file from the sidebar to open it in the canvas.",
         "emptyWorkspace": "This workspace is empty",
-        "emptyWorkspaceDesc": "Create a new project from the sidebar to start building your graph."
+        "emptyWorkspaceDesc": "Create a new project from the sidebar to start building your graph.",
+        "rename": "Rename",
+        "confirmDelete": "Are you sure you want to delete '{{name}}'? This action cannot be undone."
     },
     "projectForm": {
         "editTitle": "Edit Project",

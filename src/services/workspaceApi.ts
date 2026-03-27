@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppSettings, LoadedProject, NodeResourceMetadata, ProjectData, ProjectSummary } from "@/types";
+import type { AppSettings, LoadedProject, NodeResourceMetadata, ProjectData, ProjectSummary, WorkspaceFileEntry } from "@/types";
 
 export const workspaceApi = {
     async getAppSettings(): Promise<AppSettings> {
@@ -61,4 +61,27 @@ export const workspaceApi = {
     async listWorkspaceFolders(): Promise<string[]> {
         return invoke("list_workspace_folders");
     },
+
+    async listWorkspaceTree(): Promise<WorkspaceFileEntry[]> {
+        return invoke("list_workspace_tree");
+    },
+
+    async renameFile(path: string, newName: string): Promise<string> {
+        return invoke("rename_file", { path, newName });
+    },
+
+    async deleteFile(path: string): Promise<void> {
+        return invoke("delete_file", { path });
+    },
+
+    async readFileByPath(path: string): Promise<FileContent> {
+        return invoke("read_file_by_path", { path });
+    },
 };
+
+export interface FileContent {
+    encoding: string;
+    data: string;
+    mime_type: string | null;
+    file_name: string | null;
+}

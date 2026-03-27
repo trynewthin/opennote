@@ -53,6 +53,10 @@ pub fn run() {
             commands::workspace::copy_attachment,
             commands::workspace::create_workspace_folder,
             commands::workspace::list_workspace_folders,
+            commands::workspace::list_workspace_tree,
+            commands::workspace::rename_file,
+            commands::workspace::delete_file,
+            commands::workspace::read_file_by_path,
             commands::node::get_node_resource_metadata,
             commands::node::read_node_file,
         ])

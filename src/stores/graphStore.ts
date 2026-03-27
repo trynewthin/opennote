@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { invalidateNodeResourceMetadata } from "@/lib/nodeResourceCache";
+import { schedulePersist } from "@/lib/debouncedPersist";
 import { workspaceApi } from "@/services/workspaceApi";
 import { configService } from "@/services/configService";
 import type {
@@ -250,7 +251,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
                     : node
             )),
         }));
-        await persistSnapshot(get());
+        schedulePersist(() => persistSnapshot(get()));
     },
 
     updateNodeViewConfig: async (nodeId, patch) => {
@@ -261,7 +262,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
                     : node
             )),
         }));
-        await persistSnapshot(get());
+        schedulePersist(() => persistSnapshot(get()));
     },
 
     createRelation: async (sourceId, targetId, relationType = "related") => {

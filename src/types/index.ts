@@ -94,10 +94,18 @@ export interface RelationSemanticConfig extends JsonObject {
     weight?: number;
 }
 
+export interface WorkspaceFileEntry {
+    path: string;
+    name: string;
+    kind: "file" | "directory";
+    children: WorkspaceFileEntry[];
+}
+
 export interface AppSettings {
     language: string | null;
     theme: "light" | "dark" | null;
     recent_workspaces: string[];
+    last_workspace: string | null;
 }
 
 export interface NodeResourceMetadata {

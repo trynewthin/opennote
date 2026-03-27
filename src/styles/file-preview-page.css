@@ -1,0 +1,122 @@
+/* ─── File Preview Page (inline, not dialog) ─── */
+
+.file-preview-page {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ─── Header ─── */
+
+.file-preview-page__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    flex-shrink: 0;
+}
+
+.dark .file-preview-page__header {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.file-preview-page__title {
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-preview-page__mime {
+    font-size: 11px;
+    opacity: 0.45;
+    flex-shrink: 0;
+}
+
+/* ─── Body ─── */
+
+.file-preview-page__body {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ─── Media ─── */
+
+.file-preview-page__image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto;
+}
+
+.file-preview-page__video {
+    width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+}
+
+.file-preview-page__audio-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 200px;
+}
+
+.file-preview-page__audio {
+    width: 80%;
+    max-width: 500px;
+}
+
+/* ─── Code / Text ─── */
+
+.file-preview-page__code {
+    margin: 0;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    width: 100%;
+    flex: 1;
+}
+
+.dark .file-preview-page__code {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Status ─── */
+
+.file-preview-page__status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: inherit;
+    opacity: 0.5;
+    font-size: 13px;
+    gap: 8px;
+    min-height: 200px;
+}
+
+.file-preview-page__status--error {
+    color: #ef4444;
+    opacity: 1;
+}
