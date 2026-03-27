@@ -1,0 +1,96 @@
+warning: unused import: `state::AppState`
+  --> src\application\mod.rs:18:9
+   |
+18 | pub use state::AppState;
+   |         ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `vfs::VfsLayer`
+  --> src\application\mod.rs:19:9
+   |
+19 | pub use vfs::VfsLayer;
+   |         ^^^^^^^^^^^^^
+
+warning: struct `AppState` is never constructed
+  --> src\application\state.rs:13:12
+   |
+13 | pub struct AppState {
+   |            ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `workspace_dir` and `set_workspace` are never used
+  --> src\application\state.rs:34:12
+   |
+32 | impl AppState {
+   | ------------- methods in this implementation
+33 |     /// Read the current workspace directory, returning an error if none is open.
+34 |     pub fn workspace_dir(&self) -> crate::error::AppResult<PathBuf> {
+   |            ^^^^^^^^^^^^^
+...
+47 |     pub fn set_workspace(&self, path: PathBuf) -> crate::error::AppResult<()> {
+   |            ^^^^^^^^^^^^^
+
+warning: function `normalize_unc_path` is never used
+   --> src\application\utils.rs:106:8
+    |
+106 | pub fn normalize_unc_path(path: &Path) -> PathBuf {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: constant `EXCLUDED_DIR_NAMES` is never used
+  --> src\application\vfs.rs:10:7
+   |
+10 | const EXCLUDED_DIR_NAMES: &[&str] = &["attachments"];
+   |       ^^^^^^^^^^^^^^^^^^
+
+warning: struct `VfsLayer` is never constructed
+  --> src\application\vfs.rs:23:12
+   |
+23 | pub struct VfsLayer {
+   |            ^^^^^^^^
+
+warning: struct `EntryMeta` is never constructed
+  --> src\application\vfs.rs:35:12
+   |
+35 | pub struct EntryMeta {
+   |            ^^^^^^^^^
+
+warning: enum `EntryKind` is never used
+  --> src\application\vfs.rs:41:10
+   |
+41 | pub enum EntryKind {
+   |          ^^^^^^^^^
+
+warning: methods `refresh`, `root_entries`, `contains`, `project_paths`, `directory_paths`, and `scan_dir` are never used
+  --> src\application\vfs.rs:52:12
+   |
+46 | impl VfsLayer {
+   | ------------- methods in this implementation
+...
+52 |     pub fn refresh(&mut self, workspace_root: &Path) -> AppResult<()> {
+   |            ^^^^^^^
+...
+60 |     pub fn root_entries(&self) -> &[WorkspaceFileEntry] {
+   |            ^^^^^^^^^^^^
+...
+65 |     pub fn contains(&self, path: &Path) -> bool {
+   |            ^^^^^^^^
+...
+70 |     pub fn project_paths(&self) -> Vec<PathBuf> {
+   |            ^^^^^^^^^^^^^
+...
+82 |     pub fn directory_paths(&self) -> Vec<PathBuf> {
+   |            ^^^^^^^^^^^^^^^
+...
+92 |     fn scan_dir(
+   |        ^^^^^^^^
+
+warning: function `sort_entries` is never used
+   --> src\application\vfs.rs:150:4
+    |
+150 | fn sort_entries(entries: &mut Vec<WorkspaceFileEntry>) {
+    |    ^^^^^^^^^^^^
+
+warning: `opennote` (lib) generated 11 warnings (run `cargo fix --lib -p opennote` to apply 2 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.47s

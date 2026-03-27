@@ -2,10 +2,11 @@ mod application;
 mod commands;
 mod db;
 mod error;
+mod events;
 mod format;
 mod models;
 
-use application::{CreateProjectRequestCache, CurrentWorkspace};
+use application::CurrentWorkspace;
 use db::Database;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -27,7 +28,6 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(database)
         .manage(CurrentWorkspace::default())
-        .manage(CreateProjectRequestCache::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

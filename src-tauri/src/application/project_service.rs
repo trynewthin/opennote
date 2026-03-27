@@ -1,78 +1,29 @@
-use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use std::time::UNIX_EPOCH;
 
 use super::utils::{
     allocate_unique_path, project_base_dir_for_save, sanitize_file_name,
     validate_workspace_relative_path,
 };
-use crate::application::{AppResult, CurrentWorkspace, WorkspaceService};
-use crate::db::Database;
-use crate::format::{JsonOnFormat, OnFormat, PathResolver, ProjectData, RelativePathResolver};
+use crate::application::{AppResult, WorkspaceService};
+use crate::format::{JsonOnFormat, OnFormat, ProjectData};
 use crate::models::{LoadedProject, WorkspaceProjectSummary};
 
-const CREATE_PROJECT_REQUEST_CACHE_LIMIT: usize = 128;
-
-#[derive(Default)]
-struct CreateProjectRequestCacheState {
-    order: VecDeque<String>,
-    entries: HashMap<String, WorkspaceProjectSummary>,
-}
-
-pub struct CreateProjectRequestCache(Mutex<CreateProjectRequestCacheState>);
-
-impl Default for CreateProjectRequestCache {
-    fn default() -> Self {
-        Self(Mutex::new(CreateProjectRequestCacheState::default()))
-    }
-}
-
-impl CreateProjectRequestCache {
-    fn get(&self, request_id: &str) -> Option<WorkspaceProjectSummary> {
-        self.0.lock().unwrap().entries.get(request_id).cloned()
-    }
-
-    fn remember(&self, request_id: &str, summary: WorkspaceProjectSummary) {
-        let mut state = self.0.lock().unwrap();
-        if state.entries.contains_key(request_id) {
-            return;
-        }
-
-        state.order.push_back(request_id.to_string());
-        state.entries.insert(request_id.to_string(), summary);
-
-        while state.order.len() > CREATE_PROJECT_REQUEST_CACHE_LIMIT {
-            if let Some(expired) = state.order.pop_front() {
-                state.entries.remove(&expired);
-            }
-        }
-    }
-}
-
 pub struct ProjectService<'a> {
-    workspace_service: WorkspaceService<'a>,
-    create_request_cache: &'a CreateProjectRequestCache,
+    workspace: &'a WorkspaceService<'a>,
     format: Box<dyn OnFormat>,
-    _path_resolver: Box<dyn PathResolver>,
 }
 
 impl<'a> ProjectService<'a> {
-    pub fn new(
-        db: &'a Database,
-        current_workspace: &'a CurrentWorkspace,
-        create_request_cache: &'a CreateProjectRequestCache,
-    ) -> Self {
+    pub fn new(workspace: &'a WorkspaceService<'a>) -> Self {
         Self {
-            workspace_service: WorkspaceService::new(db, current_workspace),
-            create_request_cache,
+            workspace,
             format: Box::<JsonOnFormat>::default(),
-            _path_resolver: Box::<RelativePathResolver>::default(),
         }
     }
 
     pub fn scan_workspace(&self) -> AppResult<Vec<WorkspaceProjectSummary>> {
-        let workspace = self.workspace_service.workspace_dir()?;
+        let workspace = self.workspace.workspace_dir()?;
         let mut projects = Vec::new();
         self.scan_dir(&workspace, &mut projects)?;
         projects.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
@@ -84,15 +35,8 @@ impl<'a> ProjectService<'a> {
         name: &str,
         description: &str,
         folder_path: Option<&str>,
-        request_id: Option<&str>,
     ) -> AppResult<WorkspaceProjectSummary> {
-        if let Some(request_id) = request_id {
-            if let Some(existing) = self.create_request_cache.get(request_id) {
-                return Ok(existing);
-            }
-        }
-
-        let workspace = self.workspace_service.workspace_dir()?;
+        let workspace = self.workspace.workspace_dir()?;
         let target_dir = match folder_path {
             Some(path) => workspace.join(validate_workspace_relative_path(path)?),
             None => workspace.clone(),
@@ -102,18 +46,11 @@ impl<'a> ProjectService<'a> {
         let path = self.allocate_project_path(&target_dir, name);
         let data = ProjectData::new(name, description);
         self.write_project_file(&path, &data)?;
-        let summary = self.summary_from_data(&path, &data)?;
-
-        if let Some(request_id) = request_id {
-            self.create_request_cache
-                .remember(request_id, summary.clone());
-        }
-
-        Ok(summary)
+        self.summary_from_data(&path, &data)
     }
 
     pub fn load_project(&self, project_path: &str) -> AppResult<LoadedProject> {
-        let path = self.workspace_service.ensure_project_path(project_path)?;
+        let path = self.workspace.ensure_project_path(project_path)?;
         let data = self.read_project_file(&path)?;
         Ok(LoadedProject {
             path: path.to_string_lossy().to_string(),
@@ -126,8 +63,8 @@ impl<'a> ProjectService<'a> {
         project_path: &str,
         data: &ProjectData,
     ) -> AppResult<WorkspaceProjectSummary> {
-        let current_path = self.workspace_service.ensure_project_path(project_path)?;
-        let workspace = self.workspace_service.workspace_dir()?;
+        let current_path = self.workspace.ensure_project_path(project_path)?;
+        let workspace = self.workspace.workspace_dir()?;
         let target_path = self.target_path_for_project(&workspace, &current_path, &data.name);
 
         self.write_project_file(&target_path, data)?;
@@ -139,7 +76,7 @@ impl<'a> ProjectService<'a> {
     }
 
     pub fn delete_project(&self, project_path: &str) -> AppResult<()> {
-        let path = self.workspace_service.ensure_project_path(project_path)?;
+        let path = self.workspace.ensure_project_path(project_path)?;
         if path.exists() {
             std::fs::remove_file(path)?;
         }
@@ -257,7 +194,7 @@ impl<'a> ProjectService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::FileService;
+    use crate::application::{CurrentWorkspace, FileService};
     use crate::db::Database;
     use std::fs;
     use uuid::Uuid;
@@ -294,18 +231,19 @@ mod tests {
 
         let db = Database::new(db_path.to_str().unwrap()).unwrap();
         let current_workspace = CurrentWorkspace::default();
-        let create_request_cache = CreateProjectRequestCache::default();
-        let workspace_service = WorkspaceService::new(&db, &current_workspace);
-        let project_service = ProjectService::new(&db, &current_workspace, &create_request_cache);
-        let file_service = FileService::new(&db, &current_workspace);
+
+        // Construct one WorkspaceService and share it by reference
+        let workspace_service = WorkspaceService::new(&current_workspace);
+        let project_service = ProjectService::new(&workspace_service);
+        let file_service = FileService::new(&workspace_service);
 
         workspace_service
-            .open_workspace(workspace_dir.to_str().unwrap())
+            .open_workspace(&db, workspace_dir.to_str().unwrap())
             .unwrap();
         file_service.create_folder("folder").unwrap();
 
         let created = project_service
-            .create_project("nested-note", "desc", Some("folder"), Some("req-create"))
+            .create_project("nested-note", "desc", Some("folder"))
             .unwrap();
         let created_path = PathBuf::from(&created.path);
         assert!(created_path.ends_with(Path::new("folder").join("nested-note.on")));
@@ -336,9 +274,9 @@ mod tests {
         drop(file_service);
         drop(project_service);
         drop(workspace_service);
-        drop(create_request_cache);
         drop(current_workspace);
         drop(db);
         fs::remove_dir_all(&workspace_dir).unwrap();
     }
 }
+

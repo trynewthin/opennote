@@ -1,26 +1,25 @@
 use std::path::{Path, PathBuf};
 
 use super::utils::allocate_unique_path;
-use crate::application::{AppResult, CurrentWorkspace, WorkspaceService};
-use crate::db::Database;
+use crate::application::{AppResult, WorkspaceService};
 use crate::error::AppError;
 use crate::format::{PathResolver, RelativePathResolver};
 
 pub struct AttachmentService<'a> {
-    workspace_service: WorkspaceService<'a>,
+    workspace: &'a WorkspaceService<'a>,
     path_resolver: Box<dyn PathResolver>,
 }
 
 impl<'a> AttachmentService<'a> {
-    pub fn new(db: &'a Database, current_workspace: &'a CurrentWorkspace) -> Self {
+    pub fn new(workspace: &'a WorkspaceService<'a>) -> Self {
         Self {
-            workspace_service: WorkspaceService::new(db, current_workspace),
+            workspace,
             path_resolver: Box::<RelativePathResolver>::default(),
         }
     }
 
     pub fn copy_attachment(&self, project_path: &str, source_path: &str) -> AppResult<String> {
-        let project_file = self.workspace_service.ensure_project_path(project_path)?;
+        let project_file = self.workspace.ensure_project_path(project_path)?;
         let source = PathBuf::from(source_path);
         if !source.is_file() {
             return Err(AppError::NotFound(format!(

@@ -1,45 +1,33 @@
-use crate::application::{CreateProjectRequestCache, CurrentWorkspace, NodeService};
+use tauri::State;
+
+use crate::application::{CurrentWorkspace, NodeService, WorkspaceService};
 use crate::commands::{into_command_result, CommandResult};
-use crate::db::Database;
 use crate::format::is_text_mime;
 use crate::models::{FileContent, NodeResourceMetadata};
-use tauri::State;
 
 #[tauri::command]
 pub fn get_node_resource_metadata(
-    db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
     node_id: String,
 ) -> CommandResult<NodeResourceMetadata> {
+    let ws = WorkspaceService::new(current_workspace.inner());
     into_command_result(
-        NodeService::new(
-            db.inner(),
-            current_workspace.inner(),
-            create_request_cache.inner(),
-        )
-        .get_resource_metadata(&project_path, &node_id),
+        NodeService::new(&ws).get_resource_metadata(&project_path, &node_id),
     )
 }
 
 #[tauri::command]
 pub fn read_node_file(
-    db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
     node_id: String,
 ) -> CommandResult<FileContent> {
     use crate::error::AppError;
 
     into_command_result((|| -> crate::application::AppResult<FileContent> {
-        let meta = NodeService::new(
-            db.inner(),
-            current_workspace.inner(),
-            create_request_cache.inner(),
-        )
-        .get_resource_metadata(&project_path, &node_id)?;
+        let ws = WorkspaceService::new(current_workspace.inner());
+        let meta = NodeService::new(&ws).get_resource_metadata(&project_path, &node_id)?;
         let path = meta
             .resolved_path
             .as_deref()

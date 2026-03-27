@@ -55,8 +55,10 @@ pub fn validate_workspace_relative_path(folder_path: &str) -> AppResult<PathBuf>
 }
 
 pub fn project_base_dir_for_save(workspace: &Path, current_path: &Path) -> PathBuf {
-    let normalized_workspace =
-        std::fs::canonicalize(workspace).unwrap_or_else(|_| workspace.to_path_buf());
+    // canonicalize adds \\?\ on Windows; strip it so starts_with comparisons
+    // against paths already processed by normalize_unc_path remain consistent.
+    let canonical = std::fs::canonicalize(workspace).unwrap_or_else(|_| workspace.to_path_buf());
+    let normalized_workspace = normalize_unc_path(&canonical);
 
     current_path
         .parent()
@@ -91,4 +93,26 @@ pub fn allocate_unique_path(base_dir: &Path, file_name: &str) -> PathBuf {
         }
         index += 1;
     }
+}
+
+/// Normalise a path produced by `std::fs::canonicalize` by stripping the
+/// Windows extended-length UNC prefix (`\\?\`) when present.
+///
+/// On Windows, `canonicalize` prepends `\\?\` to absolute paths to bypass the
+/// MAX_PATH limit. While safe for kernel-level I/O, this prefix breaks web URI
+/// rendering in Tauri's webview (which expects a plain `C:\…` path) and causes
+/// unexpected failures in `starts_with` comparisons against user-supplied paths
+/// that were not canonicalized.
+///
+/// On non-Windows platforms, this function is a no-op.
+pub fn normalize_unc_path(path: &Path) -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        const UNC_PREFIX: &str = r"\\?\";
+        let s = path.to_string_lossy();
+        if let Some(stripped) = s.strip_prefix(UNC_PREFIX) {
+            return PathBuf::from(stripped);
+        }
+    }
+    path.to_path_buf()
 }

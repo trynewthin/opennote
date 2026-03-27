@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FolderOpen, MoreHorizontal, Trash2 } from "lucide-react";
+import { FolderOpen, MoreHorizontal, Trash2, Settings, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -20,12 +20,16 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useThemeStore } from "@/stores/themeStore";
+import { SettingsDialog } from "@/components/settings/SettingsDialog";
 
 export function WorkspacePage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
     const [pendingRemovePath, setPendingRemovePath] = useState<string | null>(null);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const { theme, toggleTheme } = useThemeStore();
     const titleRef = useRef<HTMLDivElement>(null);
     const outerContainerRef = useRef<HTMLDivElement>(null);
 
@@ -89,6 +93,14 @@ export function WorkspacePage() {
     return (
         <>
         <div className="min-h-screen overflow-y-auto bg-background">
+            <div className="absolute top-6 right-6 flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleTheme}>
+                    {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+                </Button>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => setSettingsOpen(true)}>
+                    <Settings className="size-5" />
+                </Button>
+            </div>
             <main className="flex min-h-screen justify-center px-6 pt-32 pb-16 sm:pt-40 sm:pb-20">
                 <div ref={outerContainerRef} className="grid w-full max-w-2xl grid-rows-[auto_1fr] gap-14">
                     <div className="flex w-full items-end text-left">
@@ -192,6 +204,7 @@ export function WorkspacePage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
         </>
     );
 }

@@ -1,26 +1,19 @@
 use std::path::PathBuf;
 
-use crate::application::{
-    AppResult, AttachmentService, CreateProjectRequestCache, CurrentWorkspace, ProjectService,
-};
-use crate::db::Database;
+use crate::application::{AppResult, AttachmentService, ProjectService, WorkspaceService};
 use crate::error::AppError;
 use crate::models::NodeResourceMetadata;
 
 pub struct NodeService<'a> {
-    project_service: ProjectService<'a>,
-    attachment_service: AttachmentService<'a>,
+    workspace: &'a WorkspaceService<'a>,
+    attachment: AttachmentService<'a>,
 }
 
 impl<'a> NodeService<'a> {
-    pub fn new(
-        db: &'a Database,
-        current_workspace: &'a CurrentWorkspace,
-        create_request_cache: &'a CreateProjectRequestCache,
-    ) -> Self {
+    pub fn new(workspace: &'a WorkspaceService<'a>) -> Self {
         Self {
-            project_service: ProjectService::new(db, current_workspace, create_request_cache),
-            attachment_service: AttachmentService::new(db, current_workspace),
+            attachment: AttachmentService::new(workspace),
+            workspace,
         }
     }
 
@@ -29,7 +22,9 @@ impl<'a> NodeService<'a> {
         project_path: &str,
         node_id: &str,
     ) -> AppResult<NodeResourceMetadata> {
-        let loaded = self.project_service.load_project(project_path)?;
+        let project_service = ProjectService::new(self.workspace);
+        let loaded = project_service.load_project(project_path)?;
+
         let node = loaded
             .data
             .nodes
@@ -60,7 +55,7 @@ impl<'a> NodeService<'a> {
         }
 
         let resolved_path = self
-            .attachment_service
+            .attachment
             .resolve_reference(&PathBuf::from(&loaded.path), &node.content)?;
         let exists = resolved_path.as_ref().is_some_and(|path| path.exists());
         let display_name = resolved_path

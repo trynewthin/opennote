@@ -1,24 +1,21 @@
 use std::path::Path;
 
 use super::utils::validate_workspace_relative_path;
-use crate::application::{AppResult, CurrentWorkspace, WorkspaceService};
-use crate::db::Database;
+use crate::application::{AppResult, WorkspaceService};
 use crate::error::AppError;
 use crate::models::WorkspaceFileEntry;
 
 pub struct FileService<'a> {
-    workspace_service: WorkspaceService<'a>,
+    workspace: &'a WorkspaceService<'a>,
 }
 
 impl<'a> FileService<'a> {
-    pub fn new(db: &'a Database, current_workspace: &'a CurrentWorkspace) -> Self {
-        Self {
-            workspace_service: WorkspaceService::new(db, current_workspace),
-        }
+    pub fn new(workspace: &'a WorkspaceService<'a>) -> Self {
+        Self { workspace }
     }
 
     pub fn rename_file(&self, path: &str, new_name: &str) -> AppResult<String> {
-        let old_path = self.workspace_service.ensure_within_workspace(path)?;
+        let old_path = self.workspace.ensure_within_workspace(path)?;
         let new_name = new_name.trim();
         if new_name.is_empty() || new_name.contains('/') || new_name.contains('\\') {
             return Err(AppError::Validation("Invalid file name".into()));
@@ -40,7 +37,7 @@ impl<'a> FileService<'a> {
     }
 
     pub fn delete_file(&self, path: &str) -> AppResult<()> {
-        let target = self.workspace_service.ensure_within_workspace(path)?;
+        let target = self.workspace.ensure_within_workspace(path)?;
         if target.is_dir() {
             std::fs::remove_dir_all(&target)?;
         } else {
@@ -50,7 +47,7 @@ impl<'a> FileService<'a> {
     }
 
     pub fn create_folder(&self, folder_path: &str) -> AppResult<()> {
-        let workspace = self.workspace_service.workspace_dir()?;
+        let workspace = self.workspace.workspace_dir()?;
         let relative = validate_workspace_relative_path(folder_path)?;
         let target = workspace.join(relative);
         std::fs::create_dir_all(&target)?;
@@ -58,7 +55,7 @@ impl<'a> FileService<'a> {
     }
 
     pub fn list_folders(&self) -> AppResult<Vec<String>> {
-        let workspace = self.workspace_service.workspace_dir()?;
+        let workspace = self.workspace.workspace_dir()?;
         let mut folders = Vec::new();
         self.collect_folders(&workspace, &mut folders)?;
         Ok(folders)
@@ -87,7 +84,7 @@ impl<'a> FileService<'a> {
     }
 
     pub fn scan_all_files(&self) -> AppResult<Vec<WorkspaceFileEntry>> {
-        let workspace = self.workspace_service.workspace_dir()?;
+        let workspace = self.workspace.workspace_dir()?;
         let mut entries = self.scan_dir_all(&workspace)?;
         sort_entries(&mut entries);
         Ok(entries)

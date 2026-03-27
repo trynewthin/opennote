@@ -1,211 +1,190 @@
+use tauri::{Emitter, State};
+
 use crate::application::{
-    AttachmentService, CreateProjectRequestCache, CurrentWorkspace, FileService, ProjectService,
-    WorkspaceService,
+    AttachmentService, CurrentWorkspace, FileService, ProjectService, WorkspaceService,
 };
 use crate::commands::{into_command_result, CommandResult};
 use crate::db::Database;
+use crate::events;
 use crate::format::{is_text_mime, ProjectData};
 use crate::models::{FileContent, LoadedProject, WorkspaceFileEntry, WorkspaceProjectSummary};
-use tauri::State;
 
 #[tauri::command]
 pub fn open_workspace(
+    app: tauri::AppHandle,
     db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     path: String,
 ) -> CommandResult<Vec<WorkspaceProjectSummary>> {
-    into_command_result(
-        (|| -> crate::application::AppResult<Vec<WorkspaceProjectSummary>> {
-            WorkspaceService::new(db.inner(), current_workspace.inner()).open_workspace(&path)?;
-            ProjectService::new(
-                db.inner(),
-                current_workspace.inner(),
-                create_request_cache.inner(),
-            )
-            .scan_workspace()
-        })(),
-    )
+    into_command_result((|| -> crate::application::AppResult<Vec<WorkspaceProjectSummary>> {
+        let ws = WorkspaceService::new(current_workspace.inner());
+        ws.open_workspace(db.inner(), &path)?;
+        let projects = ProjectService::new(&ws).scan_workspace()?;
+        let _ = app.emit(events::WORKSPACE_OPENED, events::WorkspaceOpenedPayload { path });
+        Ok(projects)
+    })())
 }
 
 #[tauri::command]
 pub fn list_projects(
-    db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
 ) -> CommandResult<Vec<WorkspaceProjectSummary>> {
-    into_command_result(
-        ProjectService::new(
-            db.inner(),
-            current_workspace.inner(),
-            create_request_cache.inner(),
-        )
-        .scan_workspace(),
-    )
+    let ws = WorkspaceService::new(current_workspace.inner());
+    into_command_result(ProjectService::new(&ws).scan_workspace())
 }
 
 #[tauri::command]
 pub fn load_project(
-    db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
 ) -> CommandResult<LoadedProject> {
-    into_command_result(
-        ProjectService::new(
-            db.inner(),
-            current_workspace.inner(),
-            create_request_cache.inner(),
-        )
-        .load_project(&project_path),
-    )
+    let ws = WorkspaceService::new(current_workspace.inner());
+    into_command_result(ProjectService::new(&ws).load_project(&project_path))
 }
 
 #[tauri::command]
 pub fn save_project(
-    db: State<Database>,
+    app: tauri::AppHandle,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
     data: ProjectData,
 ) -> CommandResult<WorkspaceProjectSummary> {
-    into_command_result(
-        ProjectService::new(
-            db.inner(),
-            current_workspace.inner(),
-            create_request_cache.inner(),
-        )
-        .save_project(&project_path, &data),
-    )
+    let ws = WorkspaceService::new(current_workspace.inner());
+    let result = ProjectService::new(&ws).save_project(&project_path, &data);
+    if let Ok(ref summary) = result {
+        let _ = app.emit(events::PROJECT_SAVED, events::ProjectMutatedPayload {
+            path: summary.path.clone(),
+            name: summary.name.clone(),
+        });
+    }
+    into_command_result(result)
 }
 
 #[tauri::command]
 pub fn create_project(
-    db: State<Database>,
+    app: tauri::AppHandle,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     name: String,
     description: String,
     folder_path: Option<String>,
-    request_id: Option<String>,
 ) -> CommandResult<WorkspaceProjectSummary> {
-    into_command_result(
-        ProjectService::new(
-            db.inner(),
-            current_workspace.inner(),
-            create_request_cache.inner(),
-        )
-        .create_project(
-            &name,
-            &description,
-            folder_path.as_deref(),
-            request_id.as_deref(),
-        ),
-    )
+    let ws = WorkspaceService::new(current_workspace.inner());
+    let result = ProjectService::new(&ws).create_project(
+        &name,
+        &description,
+        folder_path.as_deref(),
+    );
+    if let Ok(ref summary) = result {
+        let _ = app.emit(events::PROJECT_CREATED, events::ProjectMutatedPayload {
+            path: summary.path.clone(),
+            name: summary.name.clone(),
+        });
+    }
+    into_command_result(result)
 }
 
 #[tauri::command]
 pub fn delete_project(
-    db: State<Database>,
+    app: tauri::AppHandle,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
 ) -> CommandResult<()> {
-    into_command_result(
-        ProjectService::new(
-            db.inner(),
-            current_workspace.inner(),
-            create_request_cache.inner(),
-        )
-        .delete_project(&project_path),
-    )
+    let ws = WorkspaceService::new(current_workspace.inner());
+    let result = ProjectService::new(&ws).delete_project(&project_path);
+    if result.is_ok() {
+        let _ = app.emit(events::PROJECT_DELETED, events::ProjectDeletedPayload {
+            path: project_path,
+        });
+    }
+    into_command_result(result)
 }
 
 #[tauri::command]
 pub fn copy_attachment(
-    db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     project_path: String,
     source_path: String,
 ) -> CommandResult<String> {
-    let _ = create_request_cache;
+    let ws = WorkspaceService::new(current_workspace.inner());
     into_command_result(
-        AttachmentService::new(db.inner(), current_workspace.inner())
-            .copy_attachment(&project_path, &source_path),
+        AttachmentService::new(&ws).copy_attachment(&project_path, &source_path),
     )
 }
 
 #[tauri::command]
 pub fn create_workspace_folder(
-    db: State<Database>,
+    app: tauri::AppHandle,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     folder_path: String,
 ) -> CommandResult<()> {
-    let _ = create_request_cache;
-    into_command_result(
-        FileService::new(db.inner(), current_workspace.inner()).create_folder(&folder_path),
-    )
+    let ws = WorkspaceService::new(current_workspace.inner());
+    let result = FileService::new(&ws).create_folder(&folder_path);
+    if result.is_ok() {
+        let _ = app.emit(events::FOLDER_CREATED, events::FolderCreatedPayload {
+            path: folder_path,
+        });
+    }
+    into_command_result(result)
 }
 
 #[tauri::command]
 pub fn list_workspace_folders(
-    db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
 ) -> CommandResult<Vec<String>> {
-    let _ = create_request_cache;
-    into_command_result(FileService::new(db.inner(), current_workspace.inner()).list_folders())
+    let ws = WorkspaceService::new(current_workspace.inner());
+    into_command_result(FileService::new(&ws).list_folders())
 }
 
 #[tauri::command]
 pub fn list_workspace_tree(
-    db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
 ) -> CommandResult<Vec<WorkspaceFileEntry>> {
-    let _ = create_request_cache;
-    into_command_result(FileService::new(db.inner(), current_workspace.inner()).scan_all_files())
+    let ws = WorkspaceService::new(current_workspace.inner());
+    into_command_result(FileService::new(&ws).scan_all_files())
 }
 
 #[tauri::command]
 pub fn rename_file(
-    db: State<Database>,
+    app: tauri::AppHandle,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     path: String,
     new_name: String,
 ) -> CommandResult<String> {
-    let _ = create_request_cache;
-    into_command_result(
-        FileService::new(db.inner(), current_workspace.inner()).rename_file(&path, &new_name),
-    )
+    let ws = WorkspaceService::new(current_workspace.inner());
+    let result = FileService::new(&ws).rename_file(&path, &new_name);
+    if let Ok(ref new_path) = result {
+        let _ = app.emit(events::FILE_RENAMED, events::FileRenamedPayload {
+            old_path: path,
+            new_path: new_path.clone(),
+        });
+    }
+    into_command_result(result)
 }
 
 #[tauri::command]
 pub fn delete_file(
-    db: State<Database>,
+    app: tauri::AppHandle,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     path: String,
 ) -> CommandResult<()> {
-    let _ = create_request_cache;
-    into_command_result(FileService::new(db.inner(), current_workspace.inner()).delete_file(&path))
+    let ws = WorkspaceService::new(current_workspace.inner());
+    let result = FileService::new(&ws).delete_file(&path);
+    if result.is_ok() {
+        let _ = app.emit(events::FILE_DELETED, events::FileDeletedPayload {
+            path: path.clone(),
+        });
+    }
+    into_command_result(result)
 }
 
 #[tauri::command]
 pub fn read_file_by_path(
-    db: State<Database>,
     current_workspace: State<CurrentWorkspace>,
-    create_request_cache: State<CreateProjectRequestCache>,
     path: String,
 ) -> CommandResult<FileContent> {
-    let _ = create_request_cache;
-
     into_command_result((|| -> crate::application::AppResult<FileContent> {
-        let service = WorkspaceService::new(db.inner(), current_workspace.inner());
-        let resolved = service.ensure_within_workspace(&path)?;
+        let ws = WorkspaceService::new(current_workspace.inner());
+        let resolved = ws.ensure_within_workspace(&path)?;
         let file_name = resolved
             .file_name()
             .and_then(|name| name.to_str())

@@ -30,9 +30,8 @@ export const workspaceApi = {
         name: string,
         description: string,
         folderPath?: string | null,
-        requestId?: string | null,
     ): Promise<ProjectSummary> {
-        return invoke("create_project", { name, description, folderPath, requestId });
+        return invoke("create_project", { name, description, folderPath });
     },
 
     async deleteProject(projectPath: string): Promise<void> {

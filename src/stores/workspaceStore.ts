@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { workspaceApi } from "@/services/workspaceApi";
 import type { AppSettings, ProjectSummary, WorkspaceFileEntry } from "@/types";
@@ -19,11 +20,12 @@ interface WorkspaceState {
         name: string,
         description: string,
         folderPath?: string | null,
-        requestId?: string | null,
     ) => Promise<ProjectSummary>;
     updateProject: (projectPath: string, name: string, description: string) => Promise<ProjectSummary>;
     deleteProject: (projectPath: string) => Promise<void>;
     removeRecentWorkspace: (path: string) => Promise<void>;
+    /** Subscribe to backend IPC mutation events. Returns an unlisten function. */
+    subscribeToEvents: () => Promise<() => void>;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
@@ -98,12 +100,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         set({ projects, folders, fileTree });
     },
 
-    createProject: async (name, description, folderPath, requestId) => {
-        const project = await workspaceApi.createProject(name, description, folderPath, requestId);
-        set((state) => ({
-            projects: [project, ...state.projects].sort((left, right) => right.updated_at - left.updated_at),
-        }));
-        return project;
+    createProject: async (name, description, folderPath) => {
+        // Backend emits workspace://project-created after creation.
+        // We still return the project for immediate UI feedback.
+        return workspaceApi.createProject(name, description, folderPath);
     },
 
     updateProject: async (projectPath, name, description) => {
@@ -123,6 +123,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
     deleteProject: async (projectPath) => {
         await workspaceApi.deleteProject(projectPath);
+        // Backend emits workspace://project-deleted — store will also remove locally.
         set((state) => ({
             projects: state.projects.filter((project) => project.path !== projectPath),
         }));
@@ -139,5 +140,32 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
             settings: saved,
             recentWorkspaces: saved.recent_workspaces,
         });
+    },
+
+    subscribeToEvents: async () => {
+        // Listen for backend mutation events and sync local state.
+        const unlistenCreated = await listen<{ path: string; name: string }>(
+            "workspace://project-created",
+            () => get().refreshProjects(),
+        );
+
+        const unlistenDeleted = await listen<{ path: string }>(
+            "workspace://project-deleted",
+            (event) =>
+                set((state) => ({
+                    projects: state.projects.filter((p) => p.path !== event.payload.path),
+                })),
+        );
+
+        const unlistenSaved = await listen<{ path: string; name: string }>(
+            "workspace://project-saved",
+            () => get().refreshProjects(),
+        );
+
+        return () => {
+            unlistenCreated();
+            unlistenDeleted();
+            unlistenSaved();
+        };
     },
 }));
