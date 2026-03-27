@@ -31,3 +31,5 @@ log
 src-tauri/target
 src-tauri/.env
 src-tauri/gen
+
+AGENTS.md
